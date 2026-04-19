@@ -44,13 +44,12 @@ def _deduplicate(scenarios: list[Scenario]) -> list[Scenario]:
 
 
 def get_llm_adapter(config: TestWeaveXConfig) -> LLMAdapter:
-    from testweavex.llm.anthropic import AnthropicAdapter
-    from testweavex.llm.openai import OpenAIAdapter
-
     provider = config.llm.provider
     if provider == "openai":
+        from testweavex.llm.openai import OpenAIAdapter
         return OpenAIAdapter(config.llm)
     if provider == "anthropic":
+        from testweavex.llm.anthropic import AnthropicAdapter
         return AnthropicAdapter(config.llm)
     raise ConfigError(
         f"Unsupported LLM provider: '{provider}'. Choose: openai, anthropic"
