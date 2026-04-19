@@ -208,3 +208,43 @@ def test_slugify_removes_special_characters():
 def test_slugify_truncates_to_40_chars():
     from testweavex.generation.gherkin import _slugify
     assert len(_slugify("a" * 50)) <= 40
+
+
+# ─── StepMatcher ──────────────────────────────────────────────────────────────
+
+def test_step_matcher_extracts_given_when_then_patterns(tmp_path):
+    from testweavex.generation.codegen import StepMatcher
+    step_file = tmp_path / "steps.py"
+    step_file.write_text(
+        '@given("the user is logged in")\ndef step_a(): pass\n'
+        '@when("they click submit")\ndef step_b(): pass\n'
+        '@then("the form is submitted")\ndef step_c(): pass\n'
+    )
+    matcher = StepMatcher()
+    patterns = matcher.load_from_dirs([tmp_path])
+    assert "the user is logged in" in patterns
+    assert "they click submit" in patterns
+    assert "the form is submitted" in patterns
+
+
+def test_step_matcher_empty_directory_returns_empty_set(tmp_path):
+    from testweavex.generation.codegen import StepMatcher
+    matcher = StepMatcher()
+    assert matcher.load_from_dirs([tmp_path]) == set()
+
+
+def test_step_matcher_nonexistent_dir_is_skipped():
+    from testweavex.generation.codegen import StepMatcher
+    matcher = StepMatcher()
+    result = matcher.load_from_dirs([Path("/nonexistent/path/xyz")])
+    assert result == set()
+
+
+def test_step_matcher_scans_subdirectories(tmp_path):
+    from testweavex.generation.codegen import StepMatcher
+    sub = tmp_path / "auth"
+    sub.mkdir()
+    (sub / "login_steps.py").write_text('@given("I am on the login page")\ndef s(): pass\n')
+    matcher = StepMatcher()
+    patterns = matcher.load_from_dirs([tmp_path])
+    assert "I am on the login page" in patterns
