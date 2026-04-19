@@ -50,4 +50,88 @@ class StepMatcher:
 
 
 class StepDefinitionGenerator:
-    pass  # implemented in Task 4
+
+    def __init__(self, adapter: LLMAdapter, config: TestWeaveXConfig) -> None:
+        self._adapter = adapter
+        self._config = config
+
+    def _step_defs_root(self) -> Path:
+        if self._config.step_defs_dir:
+            return Path(self._config.step_defs_dir)
+        return Path.cwd() / "tests" / "step_definitions"
+
+    def analyze(
+        self,
+        scenarios: list[Scenario],
+        existing_patterns: set[str],
+    ) -> tuple[list[StepDefinition], int]:
+        normalized_existing = {_normalize_step(p) for p in existing_patterns}
+        seen: set[str] = set()
+        new_steps: list[StepDefinition] = []
+        reused_count = 0
+
+        for scenario in scenarios:
+            for line in scenario.gherkin.splitlines():
+                if not _STEP_LINE_RE.match(line):
+                    continue
+                step_text = line.strip()
+                norm = _normalize_step(step_text)
+                if norm in seen:
+                    continue
+                seen.add(norm)
+                if norm in normalized_existing:
+                    reused_count += 1
+                else:
+                    new_steps.append(StepDefinition(step_text=step_text, implementation=""))
+        return new_steps, reused_count
+
+    def write_step_definitions(
+        self,
+        steps: list[StepDefinition],
+        dry_run: bool,
+    ) -> list[Path]:
+        if not steps:
+            return []
+
+        default_file = self._step_defs_root() / "generated_steps.py"
+        groups: dict[Path, list[StepDefinition]] = {}
+        for step in steps:
+            if step.requires_new_module and step.module_spec:
+                target = self._step_defs_root() / step.module_spec
+            else:
+                target = default_file
+            groups.setdefault(target, []).append(step)
+
+        written: list[Path] = []
+        for target, group_steps in groups.items():
+            content = _render_steps(group_steps)
+            if dry_run:
+                print(f"[dry-run] Would write step definitions to: {target}")
+                print(content)
+                continue
+            try:
+                if target.exists():
+                    existing = target.read_text(encoding="utf-8").rstrip("\n")
+                    target.write_text(existing + "\n\n" + content + "\n", encoding="utf-8")
+                else:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    header = "from pytest_bdd import given, when, then\n\n"
+                    target.write_text(header + content + "\n", encoding="utf-8")
+                written.append(target)
+            except OSError as exc:
+                raise GenerationError(
+                    f"Cannot write step definitions to {target}: {exc}"
+                ) from exc
+
+        return written
+
+
+def _render_steps(steps: list[StepDefinition]) -> str:
+    lines = []
+    for step in steps:
+        if step.implementation:
+            lines.append(step.implementation)
+        else:
+            lines.append(f"# Step: {step.step_text}\npass")
+        lines.append("")
+    return "\n".join(lines)

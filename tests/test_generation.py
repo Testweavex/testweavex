@@ -248,3 +248,109 @@ def test_step_matcher_scans_subdirectories(tmp_path):
     matcher = StepMatcher()
     patterns = matcher.load_from_dirs([tmp_path])
     assert "I am on the login page" in patterns
+
+
+# ─── StepDefinitionGenerator ─────────────────────────────────────────────────
+
+def test_analyze_classifies_new_and_reused_steps():
+    from testweavex.generation.codegen import StepDefinitionGenerator
+    cfg = TestWeaveXConfig()
+    gen = StepDefinitionGenerator(MagicMock(), cfg)
+    scenario = _make_scenario(
+        gherkin=(
+            "Given I am on the login page\n"
+            "When I submit valid credentials\n"
+            "Then I am logged in"
+        )
+    )
+    # "I am on the login page" normalises to match this pattern
+    existing = {"I am on the login page"}
+    new_steps, reused = gen.analyze([scenario], existing)
+    assert reused == 1
+    assert len(new_steps) == 2
+    assert all(isinstance(s, StepDefinition) for s in new_steps)
+
+
+def test_analyze_all_matched_returns_no_new_steps():
+    from testweavex.generation.codegen import StepDefinitionGenerator
+    cfg = TestWeaveXConfig()
+    gen = StepDefinitionGenerator(MagicMock(), cfg)
+    scenario = _make_scenario(
+        gherkin=(
+            "Given I am on the login page\n"
+            "When I submit valid credentials\n"
+            "Then I am logged in"
+        )
+    )
+    existing = {
+        "I am on the login page",
+        "I submit valid credentials",
+        "I am logged in",
+    }
+    new_steps, reused = gen.analyze([scenario], existing)
+    assert new_steps == []
+    assert reused == 3
+
+
+def test_analyze_deduplicates_same_step_across_scenarios():
+    from testweavex.generation.codegen import StepDefinitionGenerator
+    cfg = TestWeaveXConfig()
+    gen = StepDefinitionGenerator(MagicMock(), cfg)
+    s1 = _make_scenario("A", gherkin="Given I am on the login page\nWhen I do X\nThen Y")
+    s2 = _make_scenario("B", gherkin="Given I am on the login page\nWhen I do Z\nThen W")
+    new_steps, _ = gen.analyze([s1, s2], set())
+    step_texts = [s.step_text for s in new_steps]
+    # "Given I am on the login page" should appear only once
+    assert sum(1 for t in step_texts if "login page" in t.lower()) == 1
+
+
+def test_write_step_definitions_dry_run_writes_nothing(tmp_path, capsys):
+    from testweavex.generation.codegen import StepDefinitionGenerator
+    cfg = TestWeaveXConfig()
+    cfg.step_defs_dir = str(tmp_path / "steps")
+    gen = StepDefinitionGenerator(MagicMock(), cfg)
+    step = StepDefinition(
+        step_text="Given I am logged in",
+        implementation="@given('I am logged in')\ndef step_logged_in(): pass",
+    )
+    paths = gen.write_step_definitions([step], dry_run=True)
+    assert paths == []
+    assert not (tmp_path / "steps").exists()
+    assert "[dry-run]" in capsys.readouterr().out
+
+
+def test_write_step_definitions_creates_new_file(tmp_path):
+    from testweavex.generation.codegen import StepDefinitionGenerator
+    cfg = TestWeaveXConfig()
+    cfg.step_defs_dir = str(tmp_path / "steps")
+    gen = StepDefinitionGenerator(MagicMock(), cfg)
+    step = StepDefinition(
+        step_text="Given I am logged in",
+        implementation="@given('I am logged in')\ndef step_logged_in(): pass",
+    )
+    paths = gen.write_step_definitions([step], dry_run=False)
+    assert len(paths) == 1
+    assert paths[0].exists()
+    content = paths[0].read_text()
+    assert "from pytest_bdd import given, when, then" in content
+    assert "step_logged_in" in content
+
+
+def test_write_step_definitions_appends_to_existing_file(tmp_path):
+    from testweavex.generation.codegen import StepDefinitionGenerator
+    cfg = TestWeaveXConfig()
+    cfg.step_defs_dir = str(tmp_path / "steps")
+    gen = StepDefinitionGenerator(MagicMock(), cfg)
+    step1 = StepDefinition(
+        step_text="Given I am logged in",
+        implementation="@given('I am logged in')\ndef step1(): pass",
+    )
+    step2 = StepDefinition(
+        step_text="When I click submit",
+        implementation="@when('I click submit')\ndef step2(): pass",
+    )
+    gen.write_step_definitions([step1], dry_run=False)
+    gen.write_step_definitions([step2], dry_run=False)
+    content = (tmp_path / "steps" / "generated_steps.py").read_text()
+    assert "step1" in content
+    assert "step2" in content
