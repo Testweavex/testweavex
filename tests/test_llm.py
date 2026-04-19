@@ -238,3 +238,65 @@ class TestOpenAIAdapter:
         mock_client.chat.completions.create.side_effect = Exception("connection error")
         adapter = OpenAIAdapter(_config("openai").llm)
         assert adapter.health_check() is False
+
+
+# ── Anthropic adapter tests ───────────────────────────────────────────────────
+
+class TestAnthropicAdapter:
+
+    @patch("testweavex.llm.anthropic.SkillLoader")
+    @patch("testweavex.llm.anthropic.anthropic.Anthropic")
+    def test_anthropic_generate_tests_returns_valid_response(
+        self, mock_anthropic_class, mock_loader_class
+    ):
+        from testweavex.llm.anthropic import AnthropicAdapter
+
+        mock_client = MagicMock()
+        mock_anthropic_class.return_value = mock_client
+        mock_client.messages.create.return_value = _anthropic_response([SCENARIO_DATA])
+
+        mock_loader = MagicMock()
+        mock_loader_class.return_value = mock_loader
+        mock_loader.load.return_value = _fake_skill("functional/smoke")
+
+        adapter = AnthropicAdapter(_config("anthropic").llm)
+        request = GenerationRequest(
+            feature_description="User authentication",
+            skill_names=["functional/smoke"],
+        )
+        response = adapter.generate_tests(request)
+
+        assert len(response.scenarios) == 1
+        assert response.scenarios[0].title == "User logs in with valid credentials"
+        assert response.scenarios[0].skill_used == "functional/smoke"
+        assert response.tokens_used == 120  # 80 + 40
+
+    @patch("testweavex.llm.anthropic.SkillLoader")
+    @patch("testweavex.llm.anthropic.anthropic.Anthropic")
+    def test_anthropic_retries_on_invalid_json_then_raises(
+        self, mock_anthropic_class, mock_loader_class
+    ):
+        from testweavex.llm.anthropic import AnthropicAdapter
+
+        mock_client = MagicMock()
+        mock_anthropic_class.return_value = mock_client
+
+        bad = MagicMock()
+        bad.content[0].text = "not json {{{"
+        bad.usage.input_tokens = 10
+        bad.usage.output_tokens = 5
+        mock_client.messages.create.return_value = bad
+
+        mock_loader = MagicMock()
+        mock_loader_class.return_value = mock_loader
+        mock_loader.load.return_value = _fake_skill()
+
+        adapter = AnthropicAdapter(_config("anthropic").llm)
+        request = GenerationRequest(
+            feature_description="Login",
+            skill_names=["functional/smoke"],
+        )
+        with pytest.raises(LLMOutputError):
+            adapter.generate_tests(request)
+
+        assert mock_client.messages.create.call_count == 3
