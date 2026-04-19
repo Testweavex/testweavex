@@ -2,36 +2,36 @@
 # Last matching rule wins. Org members listed here become required reviewers.
 
 # Default: all changes require a core maintainer review
-*                                   @testwavex/maintainers
+*                                   @Testweavex/maintainers @PShiw
 
 # Core data models and storage — highest scrutiny
-testweavex/core/                    @testwavex/maintainers
-testweavex/storage/                 @testwavex/maintainers
+testweavex/core/                    @Testweavex/maintainers @PShiw
+testweavex/storage/                 @Testweavex/maintainers @PShiw
 
 # LLM adapters — reviewed by LLM integration owners
-testweavex/llm/                     @testwavex/maintainers @testwavex/llm-reviewers
+testweavex/llm/                     @Testweavex/maintainers @PShiw
 
 # Skills (YAML) — lower barrier, any maintainer can approve
-testweavex/skills/                  @testwavex/maintainers
+testweavex/skills/                  @Testweavex/maintainers @PShiw
 
 # Execution plugin — critical path, requires maintainer sign-off
-testweavex/execution/               @testwavex/maintainers
+testweavex/execution/               @Testweavex/maintainers @PShiw
 
 # Gap analysis — requires maintainer sign-off
-testweavex/gap/                     @testwavex/maintainers
+testweavex/gap/                     @Testweavex/maintainers @PShiw
 
 # Web UI
-testweavex/web/                     @testwavex/maintainers
+testweavex/web/                     @Testweavex/maintainers @PShiw
 
 # TCM connectors
-testweavex/tcm/                     @testwavex/maintainers
+testweavex/tcm/                     @Testweavex/maintainers @PShiw
 
 # Tests — any maintainer can approve
-tests/                              @testwavex/maintainers
+tests/                              @Testweavex/maintainers @PShiw
 
 # Docs — any maintainer can approve
-docs/                               @testwavex/maintainers
+docs/                               @Testweavex/maintainers @PShiw
 
 # CI / repo config — requires maintainer sign-off
-.github/                            @testwavex/maintainers
-pyproject.toml                      @testwavex/maintainers
+.github/                            @Testweavex/maintainers @PShiw
+pyproject.toml                      @Testweavex/maintainers @PShiw
