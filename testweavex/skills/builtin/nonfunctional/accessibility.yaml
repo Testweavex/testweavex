@@ -1,0 +1,32 @@
+name: nonfunctional/accessibility
+display_name: Accessibility Tests
+description: >
+  Generate accessibility tests that verify the feature meets WCAG 2.1 AA
+  standards, including keyboard navigation, screen reader support, and
+  colour contrast requirements.
+prompt_template: >
+  You are a senior QA engineer specialising in accessibility testing.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} accessibility test scenario(s) in Gherkin format.
+  - Cover keyboard-only navigation, ARIA labels, focus management, and
+    colour contrast.
+  - Reference specific WCAG 2.1 AA success criteria in scenario descriptions.
+  - Tag each scenario with @accessibility.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Verify interactive elements are reachable via keyboard Tab/Enter/Space
+  - Assert meaningful alt text and ARIA labels are present
+  - Check focus indicators are visible
+tags:
+  - accessibility
+  - nonfunctional
+estimated_duration_seconds: 120
+priority: 3

@@ -1,0 +1,30 @@
+name: functional/integration
+display_name: Integration Tests
+description: >
+  Generate integration tests that verify interactions between two or more
+  components, services, or systems working together correctly.
+prompt_template: >
+  You are a senior QA engineer writing BDD Gherkin scenarios.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} integration test scenario(s) in Gherkin format.
+  - Each scenario must test the interaction between at least two distinct
+    components or services.
+  - Include setup steps that establish the integration context.
+  - Tag each scenario with @integration.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Verify data flows correctly between components
+  - Assert on the final state of all affected systems
+tags:
+  - integration
+  - functional
+estimated_duration_seconds: 120
+priority: 2

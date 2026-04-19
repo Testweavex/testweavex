@@ -1,0 +1,29 @@
+name: functional/system
+display_name: System Tests
+description: >
+  Generate end-to-end system tests that validate the complete application
+  stack from the user's perspective, including all integrated components.
+prompt_template: >
+  You are a senior QA engineer writing BDD Gherkin scenarios.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} system-level test scenario(s) in Gherkin format.
+  - Each scenario must exercise the full application stack.
+  - Scenarios should reflect real-world user workflows.
+  - Tag each scenario with @system.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Validate end-to-end user journeys across the full system
+  - Assert on externally observable outcomes (UI, API responses, DB state)
+tags:
+  - system
+  - functional
+estimated_duration_seconds: 180
+priority: 2

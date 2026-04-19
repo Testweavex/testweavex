@@ -1,0 +1,30 @@
+name: nonfunctional/cross_browser
+display_name: Cross-Browser Tests
+description: >
+  Generate cross-browser compatibility tests that verify the feature
+  works consistently across Chrome, Firefox, Safari, and Edge.
+prompt_template: >
+  You are a senior QA engineer specialising in cross-browser testing.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} cross-browser test scenario(s) in Gherkin format.
+  - Each scenario should expose browser-specific rendering or behaviour
+    differences.
+  - Use Scenario Outline with a browser Examples table where appropriate.
+  - Tag each scenario with @cross_browser.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Verify consistent layout and behaviour across browsers
+  - Assert JavaScript features degrade gracefully in unsupported browsers
+tags:
+  - cross_browser
+  - nonfunctional
+estimated_duration_seconds: 240
+priority: 3

@@ -1,0 +1,30 @@
+name: functional/data_driven
+display_name: Data-Driven Tests
+description: >
+  Generate data-driven scenarios using Gherkin Scenario Outline and
+  Examples tables to cover multiple input/output combinations efficiently.
+prompt_template: >
+  You are a senior QA engineer writing BDD Gherkin scenarios.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} data-driven scenario(s) using Scenario Outline
+  and Examples tables.
+  - Each outline must have at least 3 rows in its Examples table.
+  - Cover both valid and invalid input combinations.
+  - Tag each scenario with @data_driven.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Each example row should have a distinct expected outcome
+  - Include at least one negative / error case in Examples
+tags:
+  - data_driven
+  - functional
+estimated_duration_seconds: 90
+priority: 3

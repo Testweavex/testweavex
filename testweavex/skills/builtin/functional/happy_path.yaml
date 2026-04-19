@@ -1,0 +1,29 @@
+name: functional/happy_path
+display_name: Happy Path Tests
+description: >
+  Generate happy-path tests covering the primary success flow with valid
+  inputs. These scenarios represent the intended, unobstructed user journey.
+prompt_template: >
+  You are a senior QA engineer writing BDD Gherkin scenarios.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} happy-path scenario(s) in Gherkin format.
+  - Each scenario must represent a successful, unobstructed user flow.
+  - Use realistic, valid input data.
+  - Tag each scenario with @happy_path.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Assert the expected outcome for valid inputs
+  - Verify success messages, state changes, and redirects
+tags:
+  - happy_path
+  - functional
+estimated_duration_seconds: 60
+priority: 2

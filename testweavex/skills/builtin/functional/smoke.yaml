@@ -1,0 +1,32 @@
+name: functional/smoke
+display_name: Smoke Tests
+description: >
+  Generate a minimal set of smoke tests that verify the core happy-path
+  functionality is operational. Focus on critical paths only — if these
+  fail, the build is broken.
+prompt_template: >
+  You are a senior QA engineer writing BDD Gherkin scenarios.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} smoke test scenario(s) in Gherkin format.
+  - Cover only the most critical, end-to-end happy path(s).
+  - Each scenario must be independently runnable.
+  - Use concrete, realistic test data (not placeholders).
+  - Tag each scenario with @smoke.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Verify the system reaches a known good state after the action
+  - Assert on visible, deterministic outcomes
+  - Avoid implementation details in assertions
+tags:
+  - smoke
+  - functional
+estimated_duration_seconds: 45
+priority: 1

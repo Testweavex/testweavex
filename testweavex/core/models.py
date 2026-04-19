@@ -127,3 +127,49 @@ class RunSummary(BaseModel):
     skipped: int
     duration_ms: int
     coverage_percentage: float
+
+
+class GenerationRequest(BaseModel):
+    feature_description: str
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    existing_scenarios: list[str] = Field(default_factory=list)
+    skill_names: list[str] = Field(min_length=1)
+    n_suggestions: int = 5
+
+
+class Scenario(BaseModel):
+    title: str
+    gherkin: str
+    confidence: float
+    rationale: str
+    suggested_tags: list[str] = Field(default_factory=list)
+    skill_used: str
+
+    @field_validator("confidence")
+    @classmethod
+    def confidence_in_range(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(f"confidence must be 0.0–1.0, got {v}")
+        return v
+
+
+class GenerationResponse(BaseModel):
+    scenarios: list[Scenario]
+    skill_used: str
+    llm_model: str
+    tokens_used: int
+    generation_time_ms: int
+
+
+class StepDefinition(BaseModel):
+    step_text: str
+    implementation: str
+    requires_new_module: bool = False
+    module_spec: str | None = None
+
+
+class StepDefinitionResponse(BaseModel):
+    new_steps: list[StepDefinition]
+    reused_count: int
+    llm_model: str
+    tokens_used: int

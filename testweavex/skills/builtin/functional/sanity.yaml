@@ -1,0 +1,29 @@
+name: functional/sanity
+display_name: Sanity Tests
+description: >
+  Generate sanity tests that confirm a new build is stable enough for
+  further testing. Broader than smoke but shallower than full regression.
+prompt_template: >
+  You are a senior QA engineer writing BDD Gherkin scenarios.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} sanity test scenario(s) in Gherkin format.
+  - Cover the primary functional areas at a high level.
+  - Confirm no obvious regressions in recently changed areas.
+  - Tag each scenario with @sanity.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Verify primary workflows complete without errors
+  - Check that key UI elements or API responses are present
+tags:
+  - sanity
+  - functional
+estimated_duration_seconds: 60
+priority: 2
