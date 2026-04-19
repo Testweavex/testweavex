@@ -13,7 +13,7 @@ _STEP_DECORATOR_RE = re.compile(
     re.IGNORECASE,
 )
 _STEP_LINE_RE = re.compile(r"^\s*(given|when|then|and|but)\s+(.+)", re.IGNORECASE)
-_PARAM_RE = re.compile(r'(?:"[^"]*"|\{[^}]+\}|\d+)')
+_PARAM_RE = re.compile(r'(?:"[^"]*"|\{[^}]*\}|\b\d+\b)')
 _KEYWORD_RE = re.compile(r"^\s*(?:given|when|then|and|but)\s+", re.IGNORECASE)
 
 
@@ -42,7 +42,7 @@ class StepMatcher:
             for py_file in sorted(d.rglob("*.py")):
                 try:
                     content = py_file.read_text(encoding="utf-8")
-                except OSError:
+                except (OSError, UnicodeDecodeError):
                     continue
                 for match in _STEP_DECORATOR_RE.finditer(content):
                     patterns.add(match.group(1))
