@@ -80,6 +80,8 @@ class FeatureFileWriter:
             ]
 
         if not scenarios:
+            if dry_run:
+                print(f"[dry-run] All scenarios already present in: {target}")
             return []
 
         new_content = formatter.format_feature_file(request.feature_description, scenarios)
@@ -111,4 +113,4 @@ def _scenarios_only(content: str) -> str:
     for i, line in enumerate(lines):
         if line.strip().startswith("Scenario:"):
             return "\n".join(lines[i:])
-    return content
+    return ""
