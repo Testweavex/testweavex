@@ -133,7 +133,7 @@ class GenerationRequest(BaseModel):
     feature_description: str
     acceptance_criteria: list[str] = Field(default_factory=list)
     existing_scenarios: list[str] = Field(default_factory=list)
-    skill_names: list[str]
+    skill_names: list[str] = Field(min_length=1)
     n_suggestions: int = 5
 
 

@@ -180,8 +180,8 @@ class TestGenerationModels:
 
     def test_scenario_confidence_validates_range(self):
         from testweavex.core.models import Scenario
-        import pytest
-        with pytest.raises(Exception):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
             Scenario(
                 title="Test",
                 gherkin="Given something",
