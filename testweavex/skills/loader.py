@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -39,7 +38,9 @@ class SkillLoader:
         for path in sorted(self._builtin_dir.rglob("*.yaml")):
             skill = self._parse(path)
             seen[skill.name] = skill
-        for search_dir in self._search_dirs()[:-1]:
+        custom_dirs = self._search_dirs()
+        custom_dirs.pop()  # remove builtin_dir — already loaded above
+        for search_dir in custom_dirs:
             if search_dir.exists():
                 for path in sorted(search_dir.rglob("*.yaml")):
                     try:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import pytest
 from pathlib import Path
 
@@ -60,7 +61,6 @@ class TestSkillLoaderCustom:
             encoding="utf-8",
         )
         loader = SkillLoader()
-        import os
         old_cwd = os.getcwd()
         os.chdir(tmp_path)
         try:
@@ -80,7 +80,6 @@ class TestSkillLoaderCustom:
             "{existing_scenarios} {n_suggestions}'\n",
             encoding="utf-8",
         )
-        import os
         old_cwd = os.getcwd()
         os.chdir(tmp_path)
         try:
@@ -117,7 +116,6 @@ class TestSkillLoaderCustom:
             "this_is_not_valid_yaml: [unclosed\n",
             encoding="utf-8",
         )
-        import os
         old_cwd = os.getcwd()
         os.chdir(tmp_path)
         try:
