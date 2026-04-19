@@ -156,3 +156,83 @@ class TestRunAndResult:
         )
         assert r.retry_count == 0
         assert r.error_message is None
+
+
+class TestGenerationModels:
+    def test_generation_request_requires_skill_names(self):
+        from testweavex.core.models import GenerationRequest
+        req = GenerationRequest(
+            feature_description="User login",
+            skill_names=["functional/smoke"],
+        )
+        assert req.skill_names == ["functional/smoke"]
+        assert req.n_suggestions == 5
+        assert req.acceptance_criteria == []
+
+    def test_generation_request_multi_skill(self):
+        from testweavex.core.models import GenerationRequest
+        req = GenerationRequest(
+            feature_description="User login",
+            skill_names=["functional/smoke", "functional/e2e"],
+            n_suggestions=3,
+        )
+        assert len(req.skill_names) == 2
+
+    def test_scenario_confidence_validates_range(self):
+        from testweavex.core.models import Scenario
+        import pytest
+        with pytest.raises(Exception):
+            Scenario(
+                title="Test",
+                gherkin="Given something",
+                confidence=1.5,
+                rationale="reason",
+                skill_used="functional/smoke",
+            )
+
+    def test_scenario_valid_construction(self):
+        from testweavex.core.models import Scenario
+        s = Scenario(
+            title="User logs in",
+            gherkin="Given I am on login page\nWhen I enter credentials\nThen I am logged in",
+            confidence=0.9,
+            rationale="Core auth flow",
+            suggested_tags=["smoke", "auth"],
+            skill_used="functional/smoke",
+        )
+        assert s.confidence == 0.9
+        assert s.skill_used == "functional/smoke"
+
+    def test_generation_response_construction(self):
+        from testweavex.core.models import GenerationResponse, Scenario
+        s = Scenario(
+            title="Test",
+            gherkin="Given x\nWhen y\nThen z",
+            confidence=0.8,
+            rationale="reason",
+            skill_used="functional/smoke",
+        )
+        resp = GenerationResponse(
+            scenarios=[s],
+            skill_used="functional/smoke",
+            llm_model="gpt-4o",
+            tokens_used=100,
+            generation_time_ms=500,
+        )
+        assert len(resp.scenarios) == 1
+        assert resp.tokens_used == 100
+
+    def test_step_definition_response_construction(self):
+        from testweavex.core.models import StepDefinition, StepDefinitionResponse
+        step = StepDefinition(
+            step_text="I am on the login page",
+            implementation="@given('I am on the login page')\ndef step(): pass",
+        )
+        resp = StepDefinitionResponse(
+            new_steps=[step],
+            reused_count=2,
+            llm_model="gpt-4o",
+            tokens_used=80,
+        )
+        assert resp.reused_count == 2
+        assert step.requires_new_module is False
