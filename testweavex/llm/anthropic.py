@@ -68,6 +68,7 @@ class AnthropicAdapter(LLMAdapter):
                 resp = self._client.messages.create(
                     model=self._config.model,
                     max_tokens=4096,
+                    temperature=self._config.temperature,
                     system=_SYSTEM_PROMPT,
                     messages=[{"role": "user", "content": prompt}],
                 )
