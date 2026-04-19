@@ -173,3 +173,13 @@ class StepDefinitionResponse(BaseModel):
     reused_count: int
     llm_model: str
     tokens_used: int
+
+
+class GenerationResult(BaseModel):
+    written_files: list[str]
+    step_files_written: list[str]
+    reused_steps: int
+    new_steps: int
+    dry_run: bool
+    scenarios_approved: int
+    scenarios_total: int
