@@ -67,6 +67,7 @@ class TestWeaveXConfig:
     tcm: TCMConfig = field(default_factory=TCMConfig)
     gap_analysis: GapAnalysisConfig = field(default_factory=GapAnalysisConfig)
     results_server: Optional[str] = None
+    skills_dir: Optional[str] = None
 
 
 def _find_project_root(start: Path) -> Path:
@@ -102,6 +103,9 @@ def load_config(start_dir: Optional[Path] = None) -> TestWeaveXConfig:
 
     if rs := raw.get("results_server"):
         cfg.results_server = rs or None
+
+    if sd := raw.get("skills_dir"):
+        cfg.skills_dir = sd or None
 
     if tcm_raw := raw.get("tcm"):
         cfg.tcm = TCMConfig(
