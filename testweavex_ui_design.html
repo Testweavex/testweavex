@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TestWeaveX — TCM Design System</title>
+<style>
+/* ── Design Tokens ─────────────────────────────────────── */
+:root {
+  --brand:       #1A6B8A;
+  --brand-dark:  #135570;
+  --brand-light: #E8F4F8;
+  --accent:      #E07B39;
+  --accent-light:#FEF0E6;
+  --surface:     #FFFFFF;
+  --surface-sub: #F8FAFB;
+  --surface-mut: #F1F5F7;
+  --text-pri:    #1A1A2E;
+  --text-sec:    #4A4A6A;
+  --text-mut:    #8A8AA0;
+  --border:      #E2E8EC;
+  --border-str:  #C4CDD5;
+  --pass:        #1A7A4A;
+  --pass-bg:     #EAF7EF;
+  --fail:        #C0392B;
+  --fail-bg:     #FDECEA;
+  --skip:        #8A8AA0;
+  --skip-bg:     #F0F0F5;
+  --flaky:       #E07B39;
+  --flaky-bg:    #FEF0E6;
+  --manual:      #7B52AB;
+  --manual-bg:   #F2EEF9;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg:   0 8px 24px rgba(0,0,0,0.14);
+  --r4: 4px; --r8: 8px; --r12: 12px; --r99: 999px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;font-size:14px;color:var(--text-pri);background:var(--surface-sub);display:flex;height:100vh;overflow:hidden;}
+
+/* ── Sidebar ───────────────────────────────────────────── */
+.sidebar{width:220px;min-width:220px;background:var(--text-pri);display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+.sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.logo-mark{font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.5px;}
+.logo-mark span{color:var(--accent);}
+.logo-sub{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.nav{flex:1;padding:12px 8px;overflow-y:auto;}
+.nav-section{font-size:10px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:1px;text-transform:uppercase;padding:12px 8px 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r8);cursor:pointer;color:rgba(255,255,255,0.6);font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.nav-item.active{background:var(--brand);color:#fff;}
+.nav-item .icon{font-size:15px;width:18px;text-align:center;opacity:.85;}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:var(--r99);}
+.sidebar-footer{padding:12px 8px;border-top:1px solid rgba(255,255,255,0.08);}
+.user-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r8);cursor:pointer;}
+.user-row:hover{background:rgba(255,255,255,0.08);}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;}
+.user-name{font-size:12px;color:rgba(255,255,255,0.7);}
+
+/* ── Main ──────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
+.page-title{font-size:18px;font-weight:700;color:var(--text-pri);}
+.topbar-spacer{flex:1;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r8);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-primary:hover{background:var(--brand-dark);}
+.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface-sub);border-color:var(--border-str);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-green{background:var(--pass);color:#fff;}
+.btn-red{background:transparent;color:var(--fail);border:1px solid var(--fail);}
+.content{flex:1;overflow-y:auto;padding:24px;}
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* ── KPI Cards ─────────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:20px;box-shadow:var(--shadow-sm);}
+.kpi-label{font-size:11px;font-weight:600;color:var(--text-mut);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;}
+.kpi-value{font-size:32px;font-weight:800;color:var(--text-pri);line-height:1;}
+.kpi-delta{font-size:12px;margin-top:6px;display:flex;align-items:center;gap:4px;}
+.kpi-up{color:var(--pass);}
+.kpi-down{color:var(--fail);}
+.kpi-neutral{color:var(--text-mut);}
+.kpi-sub{font-size:11px;color:var(--text-mut);margin-top:4px;}
+.kpi-ring{float:right;margin-top:-8px;}
+.ring{width:52px;height:52px;position:relative;}
+.ring svg{transform:rotate(-90deg);}
+.ring-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;font-weight:700;color:var(--brand);}
+
+/* ── Charts row ─────────────────────────────────────────── */
+.charts-row{display:grid;grid-template-columns:1fr 380px;gap:16px;margin-bottom:24px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:20px;box-shadow:var(--shadow-sm);}
+.card-title{font-size:14px;font-weight:700;color:var(--text-pri);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+.card-sub{font-size:12px;color:var(--text-mut);}
+.chart-area{height:140px;position:relative;overflow:hidden;}
+.chart-grid{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;}
+.chart-line{border-top:1px dashed var(--border);width:100%;}
+.chart-svg{position:absolute;inset:0;width:100%;height:100%;}
+
+/* ── Gap list in dashboard ──────────────────────────────── */
+.gap-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.gap-item:last-child{border:none;}
+.gap-name{flex:1;font-size:13px;color:var(--text-pri);font-weight:500;}
+.gap-score-bar{width:80px;height:6px;background:var(--border);border-radius:var(--r99);overflow:hidden;}
+.gap-score-fill{height:100%;border-radius:var(--r99);}
+
+/* ── Tables ─────────────────────────────────────────────── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);box-shadow:var(--shadow-sm);overflow:hidden;}
+.filter-bar{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.search-input{flex:1;min-width:200px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--r8);font-size:13px;color:var(--text-pri);background:var(--surface-sub);outline:none;}
+.search-input:focus{border-color:var(--brand);background:#fff;}
+.filter-chip{padding:5px 10px;border-radius:var(--r99);font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--text-sec);cursor:pointer;transition:all .15s;}
+.filter-chip:hover,.filter-chip.active{background:var(--brand-light);border-color:var(--brand);color:var(--brand);}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--surface-sub);}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text-mut);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:11px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-pri);}
+tr:last-child td{border:none;}
+tbody tr{cursor:pointer;transition:background .1s;}
+tbody tr:hover{background:var(--brand-light);}
+tbody tr.selected{background:var(--brand-light);}
+
+/* ── Badges ─────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r99);font-size:11px;font-weight:600;}
+.badge-pass{background:var(--pass-bg);color:var(--pass);}
+.badge-fail{background:var(--fail-bg);color:var(--fail);}
+.badge-skip{background:var(--skip-bg);color:var(--skip);}
+.badge-flaky{background:var(--flaky-bg);color:var(--flaky);}
+.badge-manual{background:var(--manual-bg);color:var(--manual);}
+.badge-brand{background:var(--brand-light);color:var(--brand);}
+.badge-accent{background:var(--accent-light);color:var(--accent);}
+.badge-smoke{background:#FFF3CD;color:#856404;}
+.badge-e2e{background:#D1ECF1;color:#0C5460;}
+.badge-integration{background:#D4EDDA;color:#155724;}
+.badge-sanity{background:#E2D9F3;color:#6F42C1;}
+.tag{display:inline-flex;align-items:center;padding:2px 7px;background:var(--surface-sub);border:1px solid var(--border);border-radius:var(--r4);font-size:11px;color:var(--text-sec);margin-right:4px;}
+
+/* ── Detail Panel ────────────────────────────────────────── */
+.layout-with-panel{display:flex;gap:0;height:100%;overflow:hidden;}
+.panel-content{flex:1;overflow-y:auto;padding:24px;}
+.detail-panel{width:420px;min-width:420px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.panel-title{font-size:15px;font-weight:700;color:var(--text-pri);line-height:1.3;}
+.panel-close{background:none;border:none;cursor:pointer;color:var(--text-mut);font-size:18px;padding:2px;}
+.panel-body{padding:16px 20px;overflow-y:auto;flex:1;}
+.panel-section{margin-bottom:20px;}
+.panel-label{font-size:11px;font-weight:600;color:var(--text-mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.gherkin{background:#1E1E2E;border-radius:var(--r8);padding:14px 16px;font-family:'JetBrains Mono','Courier New',monospace;font-size:12px;line-height:1.7;overflow-x:auto;}
+.g-keyword{color:#7EC8E3;}
+.g-scenario{color:#FFE08A;font-weight:600;}
+.g-text{color:#CDD6F4;}
+.g-tag{color:#A6DA95;}
+.sparkline{display:flex;align-items:flex-end;gap:2px;height:28px;}
+.spark-dot{width:10px;border-radius:2px;}
+
+/* ── Gap Report extras ───────────────────────────────────── */
+.priority-bar-wrap{display:flex;align-items:center;gap:8px;}
+.priority-bar{flex:1;height:8px;background:var(--border);border-radius:var(--r99);overflow:hidden;}
+.priority-fill{height:100%;border-radius:var(--r99);}
+.score-val{font-size:12px;font-weight:700;width:36px;text-align:right;}
+.signal-grid{display:grid;gap:6px;}
+.signal-row{display:flex;align-items:center;gap:8px;font-size:12px;}
+.signal-label{width:80px;color:var(--text-sec);}
+.signal-bar{flex:1;height:5px;background:var(--border);border-radius:var(--r99);overflow:hidden;}
+.signal-fill{height:100%;background:var(--brand);border-radius:var(--r99);}
+
+/* ── Generation Review ───────────────────────────────────── */
+.gen-layout{display:grid;grid-template-columns:320px 1fr;gap:16px;height:100%;}
+.context-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:20px;box-shadow:var(--shadow-sm);}
+.suggestions-col{display:flex;flex-direction:column;gap:12px;}
+.suggestion-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:16px;box-shadow:var(--shadow-sm);transition:border-color .15s;}
+.suggestion-card.approved{border-color:var(--pass);background:var(--pass-bg);}
+.suggestion-card.discarded{opacity:.45;border-color:var(--border);}
+.sug-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
+.sug-title{font-size:14px;font-weight:700;color:var(--text-pri);flex:1;line-height:1.3;}
+.confidence{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:var(--r99);}
+.conf-high{background:var(--pass-bg);color:var(--pass);}
+.conf-mid{background:var(--flaky-bg);color:var(--flaky);}
+.conf-low{background:var(--fail-bg);color:var(--fail);}
+.rationale{font-size:12px;color:var(--text-sec);border-left:3px solid var(--accent);padding:6px 10px;background:var(--accent-light);border-radius:0 var(--r4) var(--r4) 0;margin-bottom:10px;line-height:1.5;}
+.sug-actions{display:flex;gap:8px;margin-top:12px;}
+.commit-bar{background:var(--surface);border-top:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.commit-count{font-size:13px;color:var(--text-sec);}
+.commit-count strong{color:var(--text-pri);}
+
+/* ── Live Run ────────────────────────────────────────────── */
+.run-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
+.run-meta{display:flex;gap:24px;margin-bottom:16px;flex-wrap:wrap;}
+.run-meta-item{display:flex;flex-direction:column;gap:2px;}
+.run-meta-label{font-size:10px;font-weight:600;color:var(--text-mut);text-transform:uppercase;letter-spacing:.5px;}
+.run-meta-value{font-size:14px;font-weight:600;color:var(--text-pri);}
+.progress-track{height:10px;background:var(--border);border-radius:var(--r99);overflow:hidden;display:flex;}
+.prog-pass{background:var(--pass);}
+.prog-fail{background:var(--fail);}
+.prog-remain{background:var(--border);}
+.prog-labels{display:flex;gap:16px;margin-top:8px;font-size:12px;}
+.prog-label{display:flex;align-items:center;gap:5px;}
+.prog-dot{width:8px;height:8px;border-radius:50%;}
+.live-row{animation:slideIn .3s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:none;}}
+.fail-detail{background:var(--fail-bg);border-radius:var(--r8);padding:10px 12px;margin-top:6px;font-family:monospace;font-size:11px;color:var(--fail);line-height:1.5;}
+
+/* ── Settings ────────────────────────────────────────────── */
+.settings-layout{display:grid;grid-template-columns:200px 1fr;gap:24px;}
+.settings-nav{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:8px;box-shadow:var(--shadow-sm);height:fit-content;}
+.settings-nav-item{padding:9px 12px;border-radius:var(--r8);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-sec);transition:all .15s;}
+.settings-nav-item:hover{background:var(--surface-sub);}
+.settings-nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600;}
+.settings-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:24px;box-shadow:var(--shadow-sm);}
+.form-row{margin-bottom:16px;}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;}
+.form-input{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r8);font-size:13px;color:var(--text-pri);background:var(--surface-sub);}
+.form-input:focus{border-color:var(--brand);background:#fff;outline:none;}
+.form-select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r8);font-size:13px;color:var(--text-pri);background:var(--surface-sub);}
+.form-help{font-size:11px;color:var(--text-mut);margin-top:4px;}
+.slider-row{display:flex;align-items:center;gap:12px;}
+.slider{flex:1;accent-color:var(--brand);}
+.slider-val{font-size:13px;font-weight:700;color:var(--brand);width:42px;text-align:right;}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0;}
+.section-title{font-size:16px;font-weight:700;color:var(--text-pri);margin-bottom:4px;}
+.section-sub{font-size:13px;color:var(--text-sec);margin-bottom:20px;}
+.connected-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--pass-bg);border:1px solid var(--pass);border-radius:var(--r99);font-size:12px;font-weight:600;color:var(--pass);}
+
+/* ── Scrollbars ─────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border-str);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ─────────────────────────────────────────── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">TestWeave<span>X</span></div>
+    <div class="logo-sub">TCM · v1.0</div>
+  </div>
+  <div class="nav">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" onclick="show('dashboard',this)">
+      <span class="icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="show('testcases',this)">
+      <span class="icon">🧪</span> Test Cases
+    </div>
+    <div class="nav-item" onclick="show('gaps',this)">
+      <span class="icon">🔍</span> Gap Report
+      <span class="nav-badge">23</span>
+    </div>
+    <div class="nav-item" onclick="show('generation',this)">
+      <span class="icon">✨</span> Generation
+    </div>
+    <div class="nav-section">Execution</div>
+    <div class="nav-item" onclick="show('liverun',this)">
+      <span class="icon">▶</span> Live Run
+    </div>
+    <div class="nav-item" onclick="show('history',this)">
+      <span class="icon">📋</span> Run History
+    </div>
+    <div class="nav-section">System</div>
+    <div class="nav-item" onclick="show('settings',this)">
+      <span class="icon">⚙</span> Settings
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-row">
+      <div class="avatar">PS</div>
+      <div class="user-name">Pankaj S</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── MAIN ────────────────────────────────────────────── -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard</div>
+    <div class="topbar-spacer"></div>
+    <button class="btn btn-ghost btn-sm">⟳ Sync TCM</button>
+    <button class="btn btn-primary btn-sm" onclick="show('generation', document.querySelector('[onclick*=generation]'))">✨ Generate Tests</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ── SCREEN: Dashboard ─────────────────────────── -->
+    <div class="screen active" id="s-dashboard">
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Automation Coverage</div>
+          <div class="kpi-ring">
+            <div class="ring">
+              <svg width="52" height="52" viewBox="0 0 52 52">
+                <circle cx="26" cy="26" r="20" fill="none" stroke="#E2E8EC" stroke-width="5"/>
+                <circle cx="26" cy="26" r="20" fill="none" stroke="#1A6B8A" stroke-width="5"
+                  stroke-dasharray="125.66" stroke-dashoffset="37.7" stroke-linecap="round"/>
+              </svg>
+              <div class="ring-label">70%</div>
+            </div>
+          </div>
+          <div class="kpi-value">70<span style="font-size:18px;color:var(--text-sec)">%</span></div>
+          <div class="kpi-delta kpi-up">↑ +4.2% <span style="color:var(--text-mut)">vs last week</span></div>
+          <div class="kpi-sub">347 / 495 tests automated</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Open Gaps</div>
+          <div class="kpi-value" style="color:var(--accent)">23</div>
+          <div class="kpi-delta">
+            <span class="badge badge-fail" style="font-size:10px">8 critical</span>
+            <span class="badge badge-flaky" style="font-size:10px">11 high</span>
+          </div>
+          <div class="kpi-sub">4 gaps closed this sprint</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Flaky Tests</div>
+          <div class="kpi-value" style="color:var(--flaky)">12</div>
+          <div class="kpi-delta kpi-down">↑ +3 <span style="color:var(--text-mut)">this week</span></div>
+          <div class="kpi-sub">Avg failure rate: 18%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Last Run</div>
+          <div class="kpi-value" style="font-size:22px;margin-top:4px;">
+            <span style="color:var(--pass)">312</span>
+            <span style="font-size:14px;color:var(--text-mut)"> / </span>
+            <span style="color:var(--fail);font-size:22px">8</span>
+            <span style="font-size:14px;color:var(--text-mut)"> / </span>
+            <span style="color:var(--skip);font-size:22px">27</span>
+          </div>
+          <div class="kpi-delta kpi-neutral">✓ / ✗ / –</div>
+          <div class="kpi-sub">4m 32s · CI · 12 min ago</div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-title">
+            Coverage Trend — 12 Weeks
+            <span class="card-sub">Goal: 80% by Sprint 24</span>
+          </div>
+          <div class="chart-area">
+            <div class="chart-grid">
+              <div class="chart-line"></div><div class="chart-line"></div>
+              <div class="chart-line"></div><div class="chart-line"></div>
+            </div>
+            <svg class="chart-svg" viewBox="0 0 600 140" preserveAspectRatio="none">
+              <!-- Goal line -->
+              <line x1="0" y1="28" x2="600" y2="28" stroke="#E07B39" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6"/>
+              <text x="4" y="24" font-size="9" fill="#E07B39" opacity="0.8">Goal 80%</text>
+              <!-- Area fill -->
+              <defs>
+                <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#1A6B8A" stop-opacity="0.18"/>
+                  <stop offset="100%" stop-color="#1A6B8A" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,105 L50,102 L100,98 L150,94 L200,91 L250,86 L300,84 L350,79 L400,76 L450,72 L500,68 L550,62 L600,56 L600,140 L0,140 Z" fill="url(#cg)"/>
+              <!-- Line -->
+              <path d="M0,105 L50,102 L100,98 L150,94 L200,91 L250,86 L300,84 L350,79 L400,76 L450,72 L500,68 L550,62 L600,56" fill="none" stroke="#1A6B8A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+              <!-- Dots -->
+              <circle cx="600" cy="56" r="4" fill="#1A6B8A"/>
+              <!-- Sprint labels -->
+              <text x="0" y="135" font-size="9" fill="#8A8AA0">S13</text>
+              <text x="245" y="135" font-size="9" fill="#8A8AA0">S19</text>
+              <text x="545" y="135" font-size="9" fill="#8A8AA0">S24</text>
+              <!-- Y labels -->
+              <text x="582" y="60" font-size="9" fill="#1A6B8A" font-weight="700">70%</text>
+              <text x="582" y="108" font-size="9" fill="#8A8AA0">55%</text>
+            </svg>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Top Priority Gaps</div>
+          <div class="gap-item">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--text-pri)">Login with SSO provider</div>
+              <div style="font-size:11px;color:var(--text-mut)">smoke · P1 · 3 linked defects</div>
+            </div>
+            <div style="width:70px;height:6px;background:var(--border);border-radius:999px;overflow:hidden">
+              <div style="width:91%;height:100%;background:var(--fail);border-radius:999px"></div>
+            </div>
+            <button class="btn btn-primary btn-sm">Generate</button>
+          </div>
+          <div class="gap-item">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--text-pri)">Payment 3DS flow</div>
+              <div style="font-size:11px;color:var(--text-mut)">e2e · P1 · 45 days stale</div>
+            </div>
+            <div style="width:70px;height:6px;background:var(--border);border-radius:999px;overflow:hidden">
+              <div style="width:84%;height:100%;background:var(--accent);border-radius:999px"></div>
+            </div>
+            <button class="btn btn-primary btn-sm">Generate</button>
+          </div>
+          <div class="gap-item">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--text-pri)">Password reset email link</div>
+              <div style="font-size:11px;color:var(--text-mut)">integration · P2 · high frequency</div>
+            </div>
+            <div style="width:70px;height:6px;background:var(--border);border-radius:999px;overflow:hidden">
+              <div style="width:72%;height:100%;background:var(--brand);border-radius:999px"></div>
+            </div>
+            <button class="btn btn-primary btn-sm">Generate</button>
+          </div>
+          <div class="gap-item">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--text-pri)">Cart quantity update</div>
+              <div style="font-size:11px;color:var(--text-mut)">happy_path · P2</div>
+            </div>
+            <div style="width:70px;height:6px;background:var(--border);border-radius:999px;overflow:hidden">
+              <div style="width:60%;height:100%;background:var(--brand);border-radius:999px"></div>
+            </div>
+            <button class="btn btn-primary btn-sm">Generate</button>
+          </div>
+          <div style="text-align:center;margin-top:12px">
+            <a href="#" onclick="show('gaps',document.querySelector('[onclick*=gaps]'));return false" style="font-size:12px;color:var(--brand);text-decoration:none;font-weight:600">View all 23 gaps →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700;">Recent Runs</div>
+        <table>
+          <thead><tr>
+            <th>Suite</th><th>Environment</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Duration</th><th>Triggered By</th><th>When</th>
+          </tr></thead>
+          <tbody>
+            <tr><td><strong>regression</strong></td><td><span class="badge badge-brand">CI</span></td><td style="color:var(--pass);font-weight:600">312</td><td style="color:var(--fail);font-weight:600">8</td><td style="color:var(--skip)">27</td><td>4m 32s</td><td>GitHub Actions</td><td>12 min ago</td></tr>
+            <tr><td><strong>smoke</strong></td><td><span class="badge badge-brand">staging</span></td><td style="color:var(--pass);font-weight:600">45</td><td style="color:var(--fail);font-weight:600">0</td><td style="color:var(--skip)">2</td><td>1m 08s</td><td>Pankaj S (tw)</td><td>2 hrs ago</td></tr>
+            <tr><td><strong>e2e-checkout</strong></td><td><span class="badge badge-brand">local</span></td><td style="color:var(--pass);font-weight:600">18</td><td style="color:var(--fail);font-weight:600">3</td><td style="color:var(--skip)">0</td><td>6m 14s</td><td>Pankaj S (tw)</td><td>Yesterday</td></tr>
+            <tr><td><strong>regression</strong></td><td><span class="badge badge-brand">CI</span></td><td style="color:var(--pass);font-weight:600">308</td><td style="color:var(--fail);font-weight:600">12</td><td style="color:var(--skip)">27</td><td>4m 51s</td><td>GitHub Actions</td><td>Yesterday</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SCREEN: Test Cases ─────────────────────────── -->
+    <div class="screen" id="s-testcases">
+      <div style="display:flex;gap:16px;height:calc(100vh - 104px)">
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+          <div class="table-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+            <div class="filter-bar">
+              <input class="search-input" placeholder="🔍  Search test cases..." />
+              <span class="filter-chip active">All</span>
+              <span class="filter-chip">Automated</span>
+              <span class="filter-chip">Manual</span>
+              <span class="filter-chip">smoke</span>
+              <span class="filter-chip">e2e</span>
+              <span class="filter-chip">flaky</span>
+            </div>
+            <div style="overflow-y:auto;flex:1;">
+              <table>
+                <thead><tr>
+                  <th>Test Case</th><th>Type</th><th>Status</th><th>Feature</th><th>Tags</th><th>Last Run</th><th>Auto</th>
+                </tr></thead>
+                <tbody id="tc-rows">
+                  <tr onclick="openPanel(0)" class="selected">
+                    <td><strong>User can log in with valid credentials</strong></td>
+                    <td><span class="badge badge-smoke">smoke</span></td>
+                    <td><span class="badge badge-pass">✓ Passed</span></td>
+                    <td style="font-size:12px;color:var(--brand)">auth/login.feature</td>
+                    <td><span class="tag">@smoke</span><span class="tag">@critical</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">2h ago</td>
+                    <td style="text-align:center;color:var(--pass)">✓</td>
+                  </tr>
+                  <tr onclick="openPanel(1)">
+                    <td><strong>Login fails with invalid password</strong></td>
+                    <td><span class="badge badge-smoke">smoke</span></td>
+                    <td><span class="badge badge-pass">✓ Passed</span></td>
+                    <td style="font-size:12px;color:var(--brand)">auth/login.feature</td>
+                    <td><span class="tag">@smoke</span><span class="tag">@negative</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">2h ago</td>
+                    <td style="text-align:center;color:var(--pass)">✓</td>
+                  </tr>
+                  <tr onclick="openPanel(2)">
+                    <td><strong>User completes checkout with card payment</strong></td>
+                    <td><span class="badge badge-e2e">e2e</span></td>
+                    <td><span class="badge badge-flaky">⚡ Flaky</span></td>
+                    <td style="font-size:12px;color:var(--brand)">checkout/payment.feature</td>
+                    <td><span class="tag">@e2e</span><span class="tag">@payment</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">2h ago</td>
+                    <td style="text-align:center;color:var(--pass)">✓</td>
+                  </tr>
+                  <tr onclick="openPanel(3)">
+                    <td><strong>SSO login with Google provider</strong></td>
+                    <td><span class="badge badge-integration">integration</span></td>
+                    <td><span class="badge badge-manual">✎ Manual</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">auth/sso.feature</td>
+                    <td><span class="tag">@sso</span><span class="tag">@critical</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">45 days ago</td>
+                    <td style="text-align:center;color:var(--text-mut)">—</td>
+                  </tr>
+                  <tr onclick="openPanel(4)">
+                    <td><strong>Password reset email is sent</strong></td>
+                    <td><span class="badge badge-integration">integration</span></td>
+                    <td><span class="badge badge-fail">✗ Failed</span></td>
+                    <td style="font-size:12px;color:var(--brand)">auth/password.feature</td>
+                    <td><span class="tag">@email</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">2h ago</td>
+                    <td style="text-align:center;color:var(--pass)">✓</td>
+                  </tr>
+                  <tr onclick="openPanel(5)">
+                    <td><strong>Cart shows correct item count after add</strong></td>
+                    <td><span class="badge badge-smoke">smoke</span></td>
+                    <td><span class="badge badge-pass">✓ Passed</span></td>
+                    <td style="font-size:12px;color:var(--brand)">cart/cart.feature</td>
+                    <td><span class="tag">@smoke</span><span class="tag">@cart</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">2h ago</td>
+                    <td style="text-align:center;color:var(--pass)">✓</td>
+                  </tr>
+                  <tr onclick="openPanel(6)">
+                    <td><strong>3DS payment redirect completes correctly</strong></td>
+                    <td><span class="badge badge-e2e">e2e</span></td>
+                    <td><span class="badge badge-manual">✎ Manual</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">checkout/payment.feature</td>
+                    <td><span class="tag">@e2e</span><span class="tag">@3ds</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">60 days ago</td>
+                    <td style="text-align:center;color:var(--text-mut)">—</td>
+                  </tr>
+                  <tr onclick="openPanel(7)">
+                    <td><strong>Search returns relevant results for query</strong></td>
+                    <td><span class="badge badge-sanity">sanity</span></td>
+                    <td><span class="badge badge-skip">— Skipped</span></td>
+                    <td style="font-size:12px;color:var(--brand)">search/search.feature</td>
+                    <td><span class="tag">@search</span></td>
+                    <td style="font-size:12px;color:var(--text-mut)">2h ago</td>
+                    <td style="text-align:center;color:var(--pass)">✓</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail Panel -->
+        <div class="detail-panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">User can log in with valid credentials</div>
+              <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+                <span class="badge badge-smoke">smoke</span>
+                <span class="badge badge-pass">✓ Passed</span>
+                <span class="tag">@smoke</span>
+                <span class="tag">@critical</span>
+              </div>
+            </div>
+            <button class="panel-close">✕</button>
+          </div>
+          <div class="panel-body">
+            <div class="panel-section">
+              <div class="panel-label">Gherkin</div>
+              <div class="gherkin">
+                <div><span class="g-tag">@smoke @critical</span></div>
+                <div><span class="g-keyword">Scenario: </span><span class="g-scenario">User can log in with valid credentials</span></div>
+                <div>&nbsp; <span class="g-keyword">Given</span> <span class="g-text">the login page is open</span></div>
+                <div>&nbsp; <span class="g-keyword">When</span> <span class="g-text">I enter valid email and password</span></div>
+                <div>&nbsp; <span class="g-keyword">And</span> <span class="g-text">I click the login button</span></div>
+                <div>&nbsp; <span class="g-keyword">Then</span> <span class="g-text">I should be on the dashboard page</span></div>
+                <div>&nbsp; <span class="g-keyword">And</span> <span class="g-text">I should see the welcome message</span></div>
+              </div>
+            </div>
+            <div class="panel-section">
+              <div class="panel-label">Execution History — last 15 runs</div>
+              <div class="sparkline">
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:20px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:18px;background:var(--fail)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:20px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:21px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:19px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+                <div class="spark-dot" style="height:22px;background:var(--pass)"></div>
+              </div>
+              <div style="font-size:11px;color:var(--text-mut);margin-top:6px">14 passed · 1 failed · Avg 0.8s</div>
+            </div>
+            <div class="panel-section">
+              <div class="panel-label">Last 4 Runs</div>
+              <table style="font-size:12px;">
+                <thead><tr><th style="font-size:10px">Status</th><th style="font-size:10px">Duration</th><th style="font-size:10px">Environment</th><th style="font-size:10px">When</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="badge badge-pass" style="font-size:10px">✓</span></td><td>0.8s</td><td>CI</td><td>2h ago</td></tr>
+                  <tr><td><span class="badge badge-pass" style="font-size:10px">✓</span></td><td>0.9s</td><td>CI</td><td>Yesterday</td></tr>
+                  <tr><td><span class="badge badge-fail" style="font-size:10px">✗</span></td><td>2.1s</td><td>CI</td><td>3d ago</td></tr>
+                  <tr><td><span class="badge badge-pass" style="font-size:10px">✓</span></td><td>0.7s</td><td>local</td><td>4d ago</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="panel-section">
+              <div style="font-size:11px;color:var(--text-mut)">Source: <span style="color:var(--brand)">features/auth/login.feature</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN: Gap Report ─────────────────────────── -->
+    <div class="screen" id="s-gaps">
+      <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--r8);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:16px;">
+        <span style="font-size:13px;color:var(--text-pri)"><strong>23 gaps found.</strong> Est. automation effort: ~4.5 days. Top type: <strong>smoke (8 gaps)</strong>.</span>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm">Export CSV</button>
+          <button class="btn btn-primary btn-sm">Auto-generate Top 5</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="filter-bar">
+          <input class="search-input" placeholder="🔍  Filter gaps..." style="max-width:280px"/>
+          <span class="filter-chip active">All (23)</span>
+          <span class="filter-chip">Critical (8)</span>
+          <span class="filter-chip">High (11)</span>
+          <span class="filter-chip">smoke</span>
+          <span class="filter-chip">e2e</span>
+          <span class="filter-chip">Open</span>
+          <span class="filter-chip">In Review</span>
+        </div>
+        <table>
+          <thead><tr>
+            <th style="width:32%">Test Case</th>
+            <th style="width:18%">Priority Score</th>
+            <th style="width:24%">Reason</th>
+            <th style="width:8%">Type</th>
+            <th style="width:8%">Status</th>
+            <th style="width:10%">Action</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Login with SSO provider</strong><br><span style="font-size:11px;color:var(--text-mut)">auth/sso.feature</span></td>
+              <td>
+                <div class="priority-bar-wrap">
+                  <div class="priority-bar"><div class="priority-fill" style="width:91%;background:var(--fail)"></div></div>
+                  <div class="score-val" style="color:var(--fail)">0.91</div>
+                </div>
+              </td>
+              <td style="font-size:12px;color:var(--text-sec)">P1 · 3 defects · smoke type · 45d stale</td>
+              <td><span class="badge badge-smoke">smoke</span></td>
+              <td><span class="badge badge-manual">Open</span></td>
+              <td><button class="btn btn-primary btn-sm">Generate</button></td>
+            </tr>
+            <tr>
+              <td><strong>Payment 3DS redirect flow</strong><br><span style="font-size:11px;color:var(--text-mut)">checkout/3ds.feature</span></td>
+              <td>
+                <div class="priority-bar-wrap">
+                  <div class="priority-bar"><div class="priority-fill" style="width:84%;background:var(--accent)"></div></div>
+                  <div class="score-val" style="color:var(--accent)">0.84</div>
+                </div>
+              </td>
+              <td style="font-size:12px;color:var(--text-sec)">P1 · e2e type · run 60d ago</td>
+              <td><span class="badge badge-e2e">e2e</span></td>
+              <td><span class="badge badge-manual">Open</span></td>
+              <td><button class="btn btn-primary btn-sm">Generate</button></td>
+            </tr>
+            <tr style="background:var(--accent-light)">
+              <td><strong>Password reset email delivery</strong><br><span style="font-size:11px;color:var(--text-mut)">auth/password.feature</span></td>
+              <td>
+                <div class="priority-bar-wrap">
+                  <div class="priority-bar"><div class="priority-fill" style="width:72%;background:var(--brand)"></div></div>
+                  <div class="score-val" style="color:var(--brand)">0.72</div>
+                </div>
+              </td>
+              <td style="font-size:12px;color:var(--text-sec)">P2 · integration · high freq · 1 defect</td>
+              <td><span class="badge badge-integration">integration</span></td>
+              <td><span class="badge badge-accent">In Review</span></td>
+              <td><button class="btn btn-ghost btn-sm" onclick="show('generation',document.querySelector('[onclick*=generation]'))">Review →</button></td>
+            </tr>
+            <tr>
+              <td><strong>Cart quantity update</strong><br><span style="font-size:11px;color:var(--text-mut)">cart/cart.feature</span></td>
+              <td>
+                <div class="priority-bar-wrap">
+                  <div class="priority-bar"><div class="priority-fill" style="width:60%;background:var(--brand)"></div></div>
+                  <div class="score-val" style="color:var(--brand)">0.60</div>
+                </div>
+              </td>
+              <td style="font-size:12px;color:var(--text-sec)">P2 · happy_path · medium frequency</td>
+              <td><span class="badge badge-smoke" style="background:#E8F5E9;color:#2E7D32">happy</span></td>
+              <td><span class="badge badge-manual">Open</span></td>
+              <td><button class="btn btn-primary btn-sm">Generate</button></td>
+            </tr>
+            <tr>
+              <td><strong>Profile picture upload validation</strong><br><span style="font-size:11px;color:var(--text-mut)">profile/upload.feature</span></td>
+              <td>
+                <div class="priority-bar-wrap">
+                  <div class="priority-bar"><div class="priority-fill" style="width:48%;background:var(--brand)"></div></div>
+                  <div class="score-val" style="color:var(--brand)">0.48</div>
+                </div>
+              </td>
+              <td style="font-size:12px;color:var(--text-sec)">P3 · edge_case · low defect count</td>
+              <td><span class="badge badge-sanity">edge</span></td>
+              <td><span class="badge badge-manual">Open</span></td>
+              <td>
+                <div style="display:flex;gap:4px;">
+                  <button class="btn btn-primary btn-sm">Generate</button>
+                  <button class="btn btn-ghost btn-sm" style="color:var(--text-mut)">Dismiss</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Score breakdown card -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-title">Score Signal Breakdown — Login with SSO provider</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div class="signal-grid">
+            <div class="signal-row"><div class="signal-label">Priority (30%)</div><div class="signal-bar"><div class="signal-fill" style="width:100%"></div></div><div style="font-size:12px;font-weight:700;color:var(--brand);width:32px;text-align:right">1.00</div></div>
+            <div class="signal-row"><div class="signal-label">Test Type (25%)</div><div class="signal-bar"><div class="signal-fill" style="width:100%"></div></div><div style="font-size:12px;font-weight:700;color:var(--brand);width:32px;text-align:right">1.00</div></div>
+            <div class="signal-row"><div class="signal-label">Defects (20%)</div><div class="signal-bar"><div class="signal-fill" style="width:62%"></div></div><div style="font-size:12px;font-weight:700;color:var(--brand);width:32px;text-align:right">0.62</div></div>
+            <div class="signal-row"><div class="signal-label">Frequency (15%)</div><div class="signal-bar"><div class="signal-fill" style="width:80%"></div></div><div style="font-size:12px;font-weight:700;color:var(--brand);width:32px;text-align:right">0.80</div></div>
+            <div class="signal-row"><div class="signal-label">Staleness (10%)</div><div class="signal-bar"><div class="signal-fill" style="width:100%"></div></div><div style="font-size:12px;font-weight:700;color:var(--brand);width:32px;text-align:right">1.00</div></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;">
+            <div style="font-size:48px;font-weight:800;color:var(--fail)">0.91</div>
+            <div style="font-size:13px;color:var(--text-sec)">Weighted Priority Score</div>
+            <div style="margin-top:8px;"><button class="btn btn-primary">✨ Generate Automation</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN: Generation Review ─────────────────── -->
+    <div class="screen" id="s-generation" style="display:flex;flex-direction:column;height:calc(100vh - 104px);">
+      <div style="flex:1;overflow-y:auto;padding-bottom:80px;">
+        <div class="gen-layout">
+          <div class="context-panel">
+            <div style="font-size:13px;font-weight:700;color:var(--text-pri);margin-bottom:4px;">Feature Context</div>
+            <div style="font-size:12px;color:var(--text-mut);margin-bottom:16px;">Password reset email delivery</div>
+            <div class="panel-label">Description</div>
+            <div style="font-size:13px;color:var(--text-sec);margin-bottom:16px;line-height:1.5;">Users who forget their password can request a reset link sent to their registered email address.</div>
+            <div class="panel-label">Acceptance Criteria</div>
+            <div style="font-size:12px;color:var(--text-sec);margin-bottom:16px;line-height:1.7;">
+              • Email is sent within 30 seconds<br>
+              • Link expires after 24 hours<br>
+              • Invalid email shows friendly error<br>
+              • Rate limited to 3 requests/hour
+            </div>
+            <div class="panel-label">Skill Used</div>
+            <span class="badge badge-integration" style="margin-bottom:12px;">functional/integration</span><br><br>
+            <div class="panel-label">LLM Model</div>
+            <span class="badge badge-brand">claude-sonnet-4-6</span><br><br>
+            <div class="panel-label">Existing Scenarios</div>
+            <div style="font-size:12px;color:var(--text-sec)">3 existing scenarios in this feature</div>
+            <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+            <div style="font-size:11px;color:var(--text-mut)">Generated 4 suggestions · 12.3s · 1,840 tokens</div>
+          </div>
+
+          <div class="suggestions-col">
+            <div class="suggestion-card approved">
+              <div class="sug-header">
+                <div class="sug-title">✓ Reset email is delivered within 30 seconds</div>
+                <div class="confidence conf-high">✓ 0.94</div>
+              </div>
+              <div class="rationale">Directly validates the primary acceptance criterion. High business value — email delivery is the core user expectation.</div>
+              <div class="gherkin" style="font-size:11px;">
+                <div><span class="g-keyword">Scenario: </span><span class="g-scenario">Reset email is delivered within 30 seconds</span></div>
+                <div>&nbsp; <span class="g-keyword">Given</span> <span class="g-text">a registered user with email "user@example.com"</span></div>
+                <div>&nbsp; <span class="g-keyword">When</span> <span class="g-text">they request a password reset</span></div>
+                <div>&nbsp; <span class="g-keyword">Then</span> <span class="g-text">an email should arrive within 30 seconds</span></div>
+                <div>&nbsp; <span class="g-keyword">And</span> <span class="g-text">the email should contain a valid reset link</span></div>
+              </div>
+              <div style="margin-top:8px;"><span class="tag">@integration</span><span class="tag">@email</span><span class="tag">@critical</span></div>
+              <div class="sug-actions">
+                <button class="btn btn-green btn-sm">✓ Approved</button>
+                <button class="btn btn-ghost btn-sm">✎ Edit</button>
+              </div>
+            </div>
+
+            <div class="suggestion-card">
+              <div class="sug-header">
+                <div class="sug-title">Reset link expires after 24 hours</div>
+                <div class="confidence conf-high">✓ 0.89</div>
+              </div>
+              <div class="rationale">Security-critical scenario. Token expiry prevents replay attacks. Should be automated to catch security regressions.</div>
+              <div class="gherkin" style="font-size:11px;">
+                <div><span class="g-keyword">Scenario: </span><span class="g-scenario">Reset link expires after 24 hours</span></div>
+                <div>&nbsp; <span class="g-keyword">Given</span> <span class="g-text">a password reset link generated 25 hours ago</span></div>
+                <div>&nbsp; <span class="g-keyword">When</span> <span class="g-text">the user clicks the link</span></div>
+                <div>&nbsp; <span class="g-keyword">Then</span> <span class="g-text">they should see an "expired link" error</span></div>
+                <div>&nbsp; <span class="g-keyword">And</span> <span class="g-text">they should be prompted to request a new reset</span></div>
+              </div>
+              <div style="margin-top:8px;"><span class="tag">@integration</span><span class="tag">@security</span><span class="tag">@email</span></div>
+              <div class="sug-actions">
+                <button class="btn btn-green btn-sm">✓ Approve</button>
+                <button class="btn btn-red btn-sm">✗ Discard</button>
+                <button class="btn btn-ghost btn-sm">✎ Edit</button>
+              </div>
+            </div>
+
+            <div class="suggestion-card">
+              <div class="sug-header">
+                <div class="sug-title">Invalid email shows friendly error message</div>
+                <div class="confidence conf-mid">? 0.77</div>
+              </div>
+              <div class="rationale">Validates UX contract for unregistered emails. Medium confidence — error message wording may vary; confirm exact copy with design team.</div>
+              <div class="gherkin" style="font-size:11px;">
+                <div><span class="g-keyword">Scenario: </span><span class="g-scenario">Invalid email shows friendly error message</span></div>
+                <div>&nbsp; <span class="g-keyword">Given</span> <span class="g-text">the password reset page</span></div>
+                <div>&nbsp; <span class="g-keyword">When</span> <span class="g-text">I enter an unregistered email address</span></div>
+                <div>&nbsp; <span class="g-keyword">Then</span> <span class="g-text">I should see "If this email exists, a reset link was sent"</span></div>
+              </div>
+              <div style="margin-top:8px;"><span class="tag">@integration</span><span class="tag">@negative</span></div>
+              <div class="sug-actions">
+                <button class="btn btn-green btn-sm">✓ Approve</button>
+                <button class="btn btn-red btn-sm">✗ Discard</button>
+                <button class="btn btn-ghost btn-sm">✎ Edit</button>
+              </div>
+            </div>
+
+            <div class="suggestion-card discarded">
+              <div class="sug-header">
+                <div class="sug-title">Rate limit blocks 4th request within one hour</div>
+                <div class="confidence conf-low">⚠ 0.58</div>
+              </div>
+              <div class="rationale">Rate limiting behaviour is hard to test deterministically in integration tests. Consider load testing skill instead.</div>
+              <div class="gherkin" style="font-size:11px;filter:blur(0.5px)">
+                <div><span class="g-keyword">Scenario: </span><span class="g-scenario">Rate limit blocks excessive reset requests</span></div>
+                <div>&nbsp; <span class="g-keyword">Given</span> <span class="g-text">3 reset requests already sent in this hour</span></div>
+                <div>&nbsp; <span class="g-keyword">When</span> <span class="g-text">I submit a 4th reset request</span></div>
+                <div>&nbsp; <span class="g-keyword">Then</span> <span class="g-text">I should see a rate limit error</span></div>
+              </div>
+              <div class="sug-actions">
+                <button class="btn btn-ghost btn-sm">↩ Restore</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="commit-bar">
+        <div class="commit-count"><strong>1</strong> of 4 approved · <strong>1</strong> discarded</div>
+        <div style="flex:1"></div>
+        <button class="btn btn-ghost">✎ Add Custom Scenario</button>
+        <button class="btn btn-primary">Commit Approved (1) →</button>
+      </div>
+    </div>
+
+    <!-- ── SCREEN: Live Run ───────────────────────────── -->
+    <div class="screen" id="s-liverun">
+      <div class="run-header">
+        <div class="run-meta">
+          <div class="run-meta-item"><div class="run-meta-label">Suite</div><div class="run-meta-value">regression</div></div>
+          <div class="run-meta-item"><div class="run-meta-label">Environment</div><div class="run-meta-value"><span class="badge badge-brand">CI</span></div></div>
+          <div class="run-meta-item"><div class="run-meta-label">Browser</div><div class="run-meta-value"><span class="badge badge-brand">chromium</span></div></div>
+          <div class="run-meta-item"><div class="run-meta-label">Triggered By</div><div class="run-meta-value">GitHub Actions</div></div>
+          <div class="run-meta-item"><div class="run-meta-label">Elapsed</div><div class="run-meta-value" style="color:var(--brand)">4m 32s</div></div>
+        </div>
+        <div class="progress-track">
+          <div class="prog-pass" style="width:89%"></div>
+          <div class="prog-fail" style="width:2.4%"></div>
+          <div class="prog-remain" style="width:8.6%"></div>
+        </div>
+        <div class="prog-labels">
+          <div class="prog-label"><div class="prog-dot" style="background:var(--pass)"></div><span style="color:var(--pass);font-weight:600">312 passed</span></div>
+          <div class="prog-label"><div class="prog-dot" style="background:var(--fail)"></div><span style="color:var(--fail);font-weight:600">8 failed</span></div>
+          <div class="prog-label"><div class="prog-dot" style="background:var(--border-str)"></div><span style="color:var(--text-mut)">27 remaining</span></div>
+          <div class="prog-label" style="margin-left:auto"><span style="color:var(--text-mut)">347 / 347 total</span></div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="filter-bar">
+          <span class="filter-chip active">All (320)</span>
+          <span class="filter-chip">Failed (8)</span>
+          <span class="filter-chip">Passed (312)</span>
+          <span class="filter-chip">Slow (&gt;5s)</span>
+        </div>
+        <table>
+          <thead><tr><th>Test Case</th><th>Feature</th><th>Status</th><th>Duration</th><th>Error</th></tr></thead>
+          <tbody>
+            <tr><td><strong>User can log in with valid credentials</strong></td><td style="font-size:12px;color:var(--text-mut)">auth/login.feature</td><td><span class="badge badge-pass">✓ Passed</span></td><td>0.8s</td><td>—</td></tr>
+            <tr><td><strong>Login fails with invalid password</strong></td><td style="font-size:12px;color:var(--text-mut)">auth/login.feature</td><td><span class="badge badge-pass">✓ Passed</span></td><td>0.6s</td><td>—</td></tr>
+            <tr style="border-left:3px solid var(--fail);">
+              <td><strong>Password reset email is sent</strong></td>
+              <td style="font-size:12px;color:var(--text-mut)">auth/password.feature</td>
+              <td><span class="badge badge-fail">✗ Failed</span></td>
+              <td>2.1s</td>
+              <td>
+                <details style="font-size:12px;cursor:pointer;color:var(--fail)">
+                  <summary>AssertionError</summary>
+                  <div class="fail-detail">AssertionError: Expected email to be delivered within 30s<br>Actual: Timeout after 31.2s<br>→ auth/password_steps.py:42</div>
+                </details>
+              </td>
+            </tr>
+            <tr><td><strong>Cart shows correct count after add</strong></td><td style="font-size:12px;color:var(--text-mut)">cart/cart.feature</td><td><span class="badge badge-pass">✓ Passed</span></td><td>1.2s</td><td>—</td></tr>
+            <tr><td><strong>Search returns relevant results</strong></td><td style="font-size:12px;color:var(--text-mut)">search/search.feature</td><td><span class="badge badge-skip">— Skipped</span></td><td>—</td><td style="color:var(--text-mut);font-size:12px">@slow tag excluded</td></tr>
+            <tr style="border-left:3px solid var(--fail);">
+              <td><strong>Checkout with expired card</strong></td>
+              <td style="font-size:12px;color:var(--text-mut)">checkout/payment.feature</td>
+              <td><span class="badge badge-fail">✗ Failed</span></td>
+              <td>4.8s</td>
+              <td>
+                <details style="font-size:12px;cursor:pointer;color:var(--fail)">
+                  <summary>Element not found</summary>
+                  <div class="fail-detail">TimeoutError: Waiting for selector ".error-banner"<br>Timeout: 3000ms exceeded<br>→ checkout/payment_steps.py:88</div>
+                </details>
+              </td>
+            </tr>
+            <tr class="live-row"><td><strong>User profile update saves correctly</strong></td><td style="font-size:12px;color:var(--text-mut)">profile/profile.feature</td><td><span class="badge badge-pass">✓ Passed</span></td><td>1.4s</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SCREEN: Run History (placeholder) ─────────── -->
+    <div class="screen" id="s-history">
+      <div class="table-wrap">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700;">All Runs</div>
+        <table>
+          <thead><tr><th>Suite</th><th>Environment</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Duration</th><th>Branch</th><th>Triggered By</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td><strong>regression</strong></td><td><span class="badge badge-brand">CI</span></td><td style="color:var(--pass);font-weight:600">312</td><td style="color:var(--fail);font-weight:600">8</td><td>27</td><td>4m 32s</td><td style="font-family:monospace;font-size:11px">main</td><td>GitHub Actions</td><td>12 min ago</td></tr>
+            <tr><td><strong>smoke</strong></td><td><span class="badge badge-brand">staging</span></td><td style="color:var(--pass);font-weight:600">45</td><td style="color:var(--fail);font-weight:600">0</td><td>2</td><td>1m 08s</td><td style="font-family:monospace;font-size:11px">main</td><td>Pankaj S</td><td>2h ago</td></tr>
+            <tr><td><strong>e2e-checkout</strong></td><td><span class="badge badge-brand">local</span></td><td style="color:var(--pass);font-weight:600">18</td><td style="color:var(--fail);font-weight:600">3</td><td>0</td><td>6m 14s</td><td style="font-family:monospace;font-size:11px">feat/payment</td><td>Pankaj S</td><td>Yesterday</td></tr>
+            <tr><td><strong>regression</strong></td><td><span class="badge badge-brand">CI</span></td><td style="color:var(--pass);font-weight:600">308</td><td style="color:var(--fail);font-weight:600">12</td><td>27</td><td>4m 51s</td><td style="font-family:monospace;font-size:11px">main</td><td>GitHub Actions</td><td>Yesterday</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SCREEN: Settings ───────────────────────────── -->
+    <div class="screen" id="s-settings">
+      <div class="settings-layout">
+        <div class="settings-nav">
+          <div class="settings-nav-item active">LLM Provider</div>
+          <div class="settings-nav-item">TCM Connector</div>
+          <div class="settings-nav-item">Gap Scoring</div>
+          <div class="settings-nav-item">Execution</div>
+          <div class="settings-nav-item">Result Server</div>
+        </div>
+        <div class="settings-form">
+          <div class="section-title">LLM Provider</div>
+          <div class="section-sub">Configure the AI model used for test generation and gap analysis.</div>
+
+          <div class="form-row">
+            <label class="form-label">Provider</label>
+            <select class="form-select">
+              <option selected>Anthropic</option>
+              <option>OpenAI</option>
+              <option>Ollama (self-hosted)</option>
+              <option>Azure OpenAI</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Model</label>
+            <select class="form-select">
+              <option selected>claude-sonnet-4-6</option>
+              <option>claude-opus-4-6</option>
+              <option>claude-haiku-4-5</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label">API Key</label>
+            <input class="form-input" type="password" value="sk-ant-•••••••••••••••••••••••••••••••" />
+            <div class="form-help">Stored securely. Never logged or transmitted.</div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Temperature — <span style="color:var(--brand);font-weight:700">0.3</span></label>
+            <div class="slider-row">
+              <input type="range" class="slider" min="0" max="1" step="0.1" value="0.3" />
+              <span class="slider-val">0.3</span>
+            </div>
+            <div class="form-help">Lower = more deterministic outputs. Recommended: 0.2–0.4 for test generation.</div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Max Retries on Validation Failure</label>
+            <input class="form-input" type="number" value="3" style="width:80px;" />
+            <div class="form-help">If LLM returns malformed JSON, retry up to this many times.</div>
+          </div>
+
+          <hr class="divider" />
+
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="btn btn-primary">Save Changes</button>
+            <button class="btn btn-ghost">Test Connection</button>
+            <span class="connected-badge">● Connected</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+const titles = {
+  dashboard:'Dashboard', testcases:'Test Cases',
+  gaps:'Gap Report', generation:'Generation Review',
+  liverun:'Live Run', history:'Run History', settings:'Settings'
+};
+
+function show(id, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('s-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  document.getElementById('page-title').textContent = titles[id] || id;
+}
+
+function openPanel(idx) {
+  document.querySelectorAll('#tc-rows tr').forEach((r,i) => {
+    r.classList.toggle('selected', i === idx);
+  });
+}
+
+// Slider live label
+document.querySelectorAll('.slider').forEach(sl => {
+  sl.addEventListener('input', e => {
+    e.target.nextElementSibling.textContent = e.target.value;
+    const label = e.target.closest('.form-row').querySelector('.form-label');
+    if (label && label.textContent.includes('Temperature')) {
+      label.innerHTML = `Temperature — <span style="color:var(--brand);font-weight:700">${e.target.value}</span>`;
+    }
+  });
+});
+
+// Filter chips toggle
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chip.closest('.filter-bar').querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
