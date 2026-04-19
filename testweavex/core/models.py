@@ -176,10 +176,10 @@ class StepDefinitionResponse(BaseModel):
 
 
 class GenerationResult(BaseModel):
-    written_files: list[str]
-    step_files_written: list[str]
-    reused_steps: int
-    new_steps: int
+    written_files: list[str] = Field(default_factory=list)
+    step_files_written: list[str] = Field(default_factory=list)
+    reused_steps: int = 0
+    new_steps: int = 0
     dry_run: bool
     scenarios_approved: int
     scenarios_total: int
