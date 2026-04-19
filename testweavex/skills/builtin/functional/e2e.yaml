@@ -1,0 +1,30 @@
+name: functional/e2e
+display_name: End-to-End Tests
+description: >
+  Generate end-to-end tests that simulate complete user journeys through
+  the application, including browser or API interactions from start to finish.
+prompt_template: >
+  You are a senior QA engineer writing BDD Gherkin scenarios.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} end-to-end test scenario(s) in Gherkin format.
+  - Each scenario must represent a complete user journey from entry point
+    to final outcome.
+  - Scenarios should be runnable against a live or staging environment.
+  - Tag each scenario with @e2e.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Verify the user reaches the intended final state
+  - Assert on UI elements, redirects, emails, and observable side effects
+tags:
+  - e2e
+  - functional
+estimated_duration_seconds: 300
+priority: 1

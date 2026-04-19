@@ -1,0 +1,30 @@
+name: functional/edge_cases
+display_name: Edge Case Tests
+description: >
+  Generate tests targeting boundary conditions, unusual inputs, and
+  corner cases that could cause unexpected behaviour.
+prompt_template: >
+  You are a senior QA engineer writing BDD Gherkin scenarios.
+
+  Feature under test: {feature_description}
+
+  Acceptance criteria:
+  {acceptance_criteria}
+
+  Existing scenarios (do not duplicate):
+  {existing_scenarios}
+
+  Generate {n_suggestions} edge-case scenario(s) in Gherkin format.
+  - Focus on boundary values, empty inputs, maximum lengths, and unusual but
+    valid combinations.
+  - Each scenario should test a distinct edge condition.
+  - Tag each scenario with @edge_case.
+  - Return ONLY valid Gherkin — no explanation, no markdown fences.
+assertion_hints:
+  - Verify graceful handling of boundary inputs
+  - Assert no crashes, data corruption, or silent failures
+tags:
+  - edge_case
+  - functional
+estimated_duration_seconds: 90
+priority: 3
