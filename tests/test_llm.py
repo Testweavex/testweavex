@@ -358,7 +358,7 @@ def test_openai_generate_step_definitions_returns_valid_response(mock_openai_cli
     result = adapter.generate_step_definitions([_make_scenario_obj()], ["existing step"])
     assert isinstance(result, StepDefinitionResponse)
     assert len(result.new_steps) == 1
-    assert result.reused_count == 1
+    assert result.reused_count == 0
 
 
 def test_openai_generate_step_definitions_retries_then_raises(mock_openai_client):
@@ -372,6 +372,7 @@ def test_openai_generate_step_definitions_retries_then_raises(mock_openai_client
     adapter._client = mock_openai_client
     with pytest.raises(LLMOutputError):
         adapter.generate_step_definitions([_make_scenario_obj()], [])
+    assert mock_openai_client.chat.completions.create.call_count == 3
 
 
 def test_anthropic_generate_step_definitions_returns_valid_response(mock_anthropic_client):
@@ -396,3 +397,17 @@ def test_anthropic_generate_step_definitions_returns_valid_response(mock_anthrop
     result = adapter.generate_step_definitions([_make_scenario_obj()], [])
     assert isinstance(result, StepDefinitionResponse)
     assert len(result.new_steps) == 1
+
+
+def test_anthropic_generate_step_definitions_retries_then_raises(mock_anthropic_client):
+    from testweavex.llm.anthropic import AnthropicAdapter
+    from testweavex.core.exceptions import LLMOutputError
+    mock_anthropic_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="not json")],
+        usage=MagicMock(input_tokens=10, output_tokens=10),
+    )
+    adapter = AnthropicAdapter(_make_llm_config())
+    adapter._client = mock_anthropic_client
+    with pytest.raises(LLMOutputError):
+        adapter.generate_step_definitions([_make_scenario_obj()], [])
+    assert mock_anthropic_client.messages.create.call_count == 3

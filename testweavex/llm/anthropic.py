@@ -105,7 +105,7 @@ class AnthropicAdapter(LLMAdapter):
                 tokens = resp.usage.input_tokens + resp.usage.output_tokens
                 return StepDefinitionResponse(
                     new_steps=steps,
-                    reused_count=len(existing_steps),
+                    reused_count=0,
                     llm_model=self._config.model,
                     tokens_used=tokens,
                 )

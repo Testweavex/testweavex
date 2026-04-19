@@ -101,7 +101,7 @@ class OpenAIAdapter(LLMAdapter):
                 tokens = resp.usage.total_tokens if resp.usage else 0
                 return StepDefinitionResponse(
                     new_steps=steps,
-                    reused_count=len(existing_steps),
+                    reused_count=0,
                     llm_model=self._config.model,
                     tokens_used=tokens,
                 )
