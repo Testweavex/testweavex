@@ -354,3 +354,79 @@ def test_write_step_definitions_appends_to_existing_file(tmp_path):
     content = (tmp_path / "steps" / "generated_steps.py").read_text()
     assert "step1" in content
     assert "step2" in content
+
+
+# ─── GenerationEngine ─────────────────────────────────────────────────────────
+
+def test_engine_dry_run_returns_result_with_no_files_written(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from testweavex.generation.engine import GenerationEngine
+    cfg = TestWeaveXConfig()
+    cfg.features_dir = str(tmp_path / "features")
+    engine = GenerationEngine(_make_mock_adapter(), cfg, AutoApproveCallback())
+    result = engine.run(_make_request(), category="UI", dry_run=True)
+    assert result.dry_run is True
+    assert result.written_files == []
+    assert not (tmp_path / "features").exists()
+
+
+def test_engine_run_writes_feature_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from testweavex.generation.engine import GenerationEngine
+    cfg = TestWeaveXConfig()
+    cfg.features_dir = str(tmp_path / "features")
+    engine = GenerationEngine(_make_mock_adapter(), cfg, AutoApproveCallback())
+    result = engine.run(_make_request(), category="UI", dry_run=False)
+    assert result.scenarios_approved == 1
+    assert result.scenarios_total == 1
+    assert len(result.written_files) == 1
+
+
+def test_engine_run_empty_review_returns_early(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from testweavex.generation.engine import GenerationEngine
+    cfg = TestWeaveXConfig()
+    cfg.features_dir = str(tmp_path / "features")
+    engine = GenerationEngine(_make_mock_adapter(), cfg, RejectAllCallback())
+    result = engine.run(_make_request(), category="UI", dry_run=False)
+    assert result.scenarios_approved == 0
+    assert result.written_files == []
+    assert result.step_files_written == []
+
+
+def test_engine_run_partial_approval_filters_scenarios(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from testweavex.generation.engine import GenerationEngine
+
+    class PickOneCallback:
+        def review_scenarios(self, scenarios, dry_run):
+            return scenarios[:1]
+        def review_new_modules(self, steps, dry_run):
+            return steps
+
+    scenarios = [
+        _make_scenario("Login A"),
+        _make_scenario("Login B"),
+        _make_scenario("Login C"),
+    ]
+    cfg = TestWeaveXConfig()
+    cfg.features_dir = str(tmp_path / "features")
+    engine = GenerationEngine(_make_mock_adapter(scenarios), cfg, PickOneCallback())
+    result = engine.run(_make_request(), category="UI", dry_run=False)
+    assert result.scenarios_total == 3
+    assert result.scenarios_approved == 1
+
+
+def test_engine_run_counts_reused_steps(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from testweavex.generation.engine import GenerationEngine
+    step_dir = tmp_path / "tests" / "step_definitions"
+    step_dir.mkdir(parents=True)
+    (step_dir / "existing.py").write_text(
+        '@given("I am on the login page")\ndef step(): pass\n'
+    )
+    cfg = TestWeaveXConfig()
+    cfg.features_dir = str(tmp_path / "features")
+    engine = GenerationEngine(_make_mock_adapter(), cfg, AutoApproveCallback())
+    result = engine.run(_make_request(), category="UI", dry_run=False)
+    assert result.reused_steps >= 1
