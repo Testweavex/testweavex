@@ -146,7 +146,7 @@ class GenerationEngine:
 
         if new_step_stubs:
             approved_stubs = self._callback.review_new_modules(new_step_stubs, dry_run)
-            if approved_stubs:
+            if approved_stubs and not dry_run:
                 step_resp = self._adapter.generate_step_definitions(
                     approved, list(existing_patterns)
                 )

@@ -363,11 +363,13 @@ def test_engine_dry_run_returns_result_with_no_files_written(tmp_path, monkeypat
     from testweavex.generation.engine import GenerationEngine
     cfg = TestWeaveXConfig()
     cfg.features_dir = str(tmp_path / "features")
-    engine = GenerationEngine(_make_mock_adapter(), cfg, AutoApproveCallback())
+    adapter = _make_mock_adapter()
+    engine = GenerationEngine(adapter, cfg, AutoApproveCallback())
     result = engine.run(_make_request(), category="UI", dry_run=True)
     assert result.dry_run is True
     assert result.written_files == []
     assert not (tmp_path / "features").exists()
+    assert adapter.generate_step_definitions.call_count == 0
 
 
 def test_engine_run_writes_feature_file(tmp_path, monkeypatch):
