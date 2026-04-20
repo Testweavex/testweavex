@@ -10,6 +10,7 @@ from testweavex.core.models import GenerationRequest, Scenario
 _SCENARIO_HEADING_RE = re.compile(r"^\s*Scenario:\s*(.+)$", re.MULTILINE)
 _NON_ALNUM_RE = re.compile(r"[^\w\s]")
 _WHITESPACE_RE = re.compile(r"\s+")
+_SAFE_PATH_RE = re.compile(r"[^\w\-]")
 
 
 def _slugify(text: str) -> str:
@@ -29,7 +30,7 @@ class GherkinFormatter:
                 stripped = line.strip()
                 if not stripped:
                     continue
-                if stripped.lower().startswith("scenario:"):
+                if stripped.lower().startswith("scenario:") or stripped.lower().startswith("feature:"):
                     continue
                 lines.append(f"    {stripped}")
             if i < len(scenarios) - 1:
@@ -50,8 +51,9 @@ class FeatureFileWriter:
     def resolve_path(
         self, category: str, skill_name: str, functionality_name: str
     ) -> Path:
+        safe_category = _SAFE_PATH_RE.sub("_", category)
         short_skill = skill_name.split("/")[-1] if "/" in skill_name else skill_name
-        return self._features_root() / category / short_skill / f"{functionality_name}.feature"
+        return self._features_root() / safe_category / short_skill / f"{functionality_name}.feature"
 
     def write(
         self,

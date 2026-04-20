@@ -97,9 +97,13 @@ class StepDefinitionGenerator:
         groups: dict[Path, list[StepDefinition]] = {}
         for step in steps:
             if step.requires_new_module and step.module_spec:
-                candidate = (self._step_defs_root() / step.module_spec).resolve()
                 root = self._step_defs_root().resolve()
-                target = candidate if str(candidate).startswith(str(root)) else default_file
+                candidate = (root / step.module_spec).resolve()
+                try:
+                    candidate.relative_to(root)
+                    target = candidate
+                except ValueError:
+                    target = default_file
             else:
                 target = default_file
             groups.setdefault(target, []).append(step)
