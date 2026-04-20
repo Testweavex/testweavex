@@ -150,7 +150,7 @@ class _TestWeaveXPlugin:
 
         suite = config.getoption("--suite", default="default")
         environment = config.getoption("--environment", default="local")
-        browser = config.getoption("--browser", default=None)
+        browser = config.getoption("browser", default=None)
 
         self._run = self._repo.start_run(
             suite=suite,
