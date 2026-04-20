@@ -12,6 +12,7 @@ from testweavex.core.models import (
     GenerationRequest,
     GenerationResponse,
     Scenario,
+    StepDefinition,
     StepDefinitionResponse,
     TestCase,
 )
@@ -87,7 +88,32 @@ class AnthropicAdapter(LLMAdapter):
     def generate_step_definitions(
         self, scenarios: list[Scenario], existing_steps: list[str]
     ) -> StepDefinitionResponse:
-        raise NotImplementedError
+        prompt = _build_step_prompt(scenarios, existing_steps)
+        last_exc: Exception | None = None
+        for _ in range(self._config.max_retries):
+            try:
+                resp = self._client.messages.create(
+                    model=self._config.model,
+                    max_tokens=4096,
+                    temperature=self._config.temperature,
+                    system=_SYSTEM_PROMPT,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                raw = resp.content[0].text
+                data = json.loads(raw)
+                steps = [StepDefinition(**s) for s in data.get("new_steps", [])]
+                tokens = resp.usage.input_tokens + resp.usage.output_tokens
+                return StepDefinitionResponse(
+                    new_steps=steps,
+                    reused_count=0,
+                    llm_model=self._config.model,
+                    tokens_used=tokens,
+                )
+            except (json.JSONDecodeError, ValidationError, KeyError, TypeError) as exc:
+                last_exc = exc
+        raise LLMOutputError(
+            f"Anthropic returned invalid step definitions after {self._config.max_retries} attempts"
+        ) from last_exc
 
     def suggest_gap_automation(self, manual_test: TestCase) -> GenerationResponse:
         raise NotImplementedError
@@ -102,3 +128,17 @@ class AnthropicAdapter(LLMAdapter):
             return True
         except Exception:
             return False
+
+
+def _build_step_prompt(scenarios: list[Scenario], existing_steps: list[str]) -> str:
+    gherkin_text = "\n\n".join(s.gherkin for s in scenarios)
+    existing_text = (
+        "\n".join(f"- {s}" for s in existing_steps) if existing_steps else "None"
+    )
+    return (
+        f"Feature scenarios:\n{gherkin_text}\n\n"
+        f"Already implemented steps (do NOT re-generate):\n{existing_text}\n\n"
+        "Generate pytest-bdd step definitions ONLY for steps not already implemented.\n"
+        'Return JSON: {"new_steps": [{"step_text": "...", "implementation": "...", '
+        '"requires_new_module": false, "module_spec": null}]}'
+    )

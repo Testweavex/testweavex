@@ -300,3 +300,114 @@ class TestAnthropicAdapter:
             adapter.generate_tests(request)
 
         assert mock_client.messages.create.call_count == 3
+
+
+# ─── generate_step_definitions ───────────────────────────────────────────────
+
+def _make_llm_config():
+    return LLMConfig(
+        provider="openai",
+        model="gpt-4o",
+        api_key="test-key",
+        temperature=0.3,
+        max_retries=3,
+        timeout_seconds=30,
+    )
+
+
+@pytest.fixture
+def mock_openai_client():
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_anthropic_client():
+    return MagicMock()
+
+
+def _make_scenario_obj(title="Login succeeds"):
+    from testweavex.core.models import Scenario
+    return Scenario(
+        title=title,
+        gherkin="Given I am on the login page\nWhen I submit credentials\nThen I am logged in",
+        confidence=0.9,
+        rationale="test",
+        skill_used="functional/smoke",
+    )
+
+
+def test_openai_generate_step_definitions_returns_valid_response(mock_openai_client):
+    from testweavex.llm.openai import OpenAIAdapter
+    from testweavex.core.models import StepDefinitionResponse
+    resp_json = json.dumps({
+        "new_steps": [
+            {
+                "step_text": "Given I am on the login page",
+                "implementation": "@given('I am on the login page')\ndef step(): pass",
+                "requires_new_module": False,
+                "module_spec": None,
+            }
+        ]
+    })
+    mock_openai_client.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content=resp_json))],
+        usage=MagicMock(total_tokens=80),
+    )
+    adapter = OpenAIAdapter(_make_llm_config())
+    adapter._client = mock_openai_client
+    result = adapter.generate_step_definitions([_make_scenario_obj()], ["existing step"])
+    assert isinstance(result, StepDefinitionResponse)
+    assert len(result.new_steps) == 1
+    assert result.reused_count == 0
+
+
+def test_openai_generate_step_definitions_retries_then_raises(mock_openai_client):
+    from testweavex.llm.openai import OpenAIAdapter
+    from testweavex.core.exceptions import LLMOutputError
+    mock_openai_client.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content="not json"))],
+        usage=MagicMock(total_tokens=10),
+    )
+    adapter = OpenAIAdapter(_make_llm_config())
+    adapter._client = mock_openai_client
+    with pytest.raises(LLMOutputError):
+        adapter.generate_step_definitions([_make_scenario_obj()], [])
+    assert mock_openai_client.chat.completions.create.call_count == 3
+
+
+def test_anthropic_generate_step_definitions_returns_valid_response(mock_anthropic_client):
+    from testweavex.llm.anthropic import AnthropicAdapter
+    from testweavex.core.models import StepDefinitionResponse
+    resp_json = json.dumps({
+        "new_steps": [
+            {
+                "step_text": "When I submit credentials",
+                "implementation": "@when('I submit credentials')\ndef step(): pass",
+                "requires_new_module": False,
+                "module_spec": None,
+            }
+        ]
+    })
+    mock_anthropic_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(text=resp_json)],
+        usage=MagicMock(input_tokens=40, output_tokens=60),
+    )
+    adapter = AnthropicAdapter(_make_llm_config())
+    adapter._client = mock_anthropic_client
+    result = adapter.generate_step_definitions([_make_scenario_obj()], [])
+    assert isinstance(result, StepDefinitionResponse)
+    assert len(result.new_steps) == 1
+
+
+def test_anthropic_generate_step_definitions_retries_then_raises(mock_anthropic_client):
+    from testweavex.llm.anthropic import AnthropicAdapter
+    from testweavex.core.exceptions import LLMOutputError
+    mock_anthropic_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="not json")],
+        usage=MagicMock(input_tokens=10, output_tokens=10),
+    )
+    adapter = AnthropicAdapter(_make_llm_config())
+    adapter._client = mock_anthropic_client
+    with pytest.raises(LLMOutputError):
+        adapter.generate_step_definitions([_make_scenario_obj()], [])
+    assert mock_anthropic_client.messages.create.call_count == 3

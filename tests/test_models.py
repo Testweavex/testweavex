@@ -236,3 +236,31 @@ class TestGenerationModels:
         )
         assert resp.reused_count == 2
         assert step.requires_new_module is False
+
+
+def test_generation_result_valid():
+    from testweavex.core.models import GenerationResult
+    result = GenerationResult(
+        written_files=["features/UI/smoke/login.feature"],
+        step_files_written=["tests/step_definitions/login_steps.py"],
+        reused_steps=3,
+        new_steps=2,
+        dry_run=False,
+        scenarios_approved=2,
+        scenarios_total=5,
+    )
+    assert result.scenarios_approved == 2
+    assert result.dry_run is False
+    assert result.reused_steps == 3
+
+
+def test_testweavex_config_has_features_dir():
+    from testweavex.core.config import TestWeaveXConfig
+    cfg = TestWeaveXConfig()
+    assert cfg.features_dir is None
+
+
+def test_testweavex_config_has_step_defs_dir():
+    from testweavex.core.config import TestWeaveXConfig
+    cfg = TestWeaveXConfig()
+    assert cfg.step_defs_dir is None
