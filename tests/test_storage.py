@@ -219,3 +219,86 @@ class TestScoringSignals:
         from testweavex.core.exceptions import RecordNotFound
         with pytest.raises(RecordNotFound):
             repo.get_scoring_signals("nonexistent-id")
+
+
+def test_get_all_test_cases_empty(repo):
+    assert repo.get_all_test_cases() == []
+
+
+def test_get_all_test_cases_returns_all(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    results = repo.get_all_test_cases()
+    assert len(results) == 1
+    assert results[0].id == tc.id
+
+
+def test_get_never_run_test_cases(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    never_run = repo.get_never_run_test_cases()
+    assert any(tc_item.id == tc.id for tc_item in never_run)
+
+
+def test_get_never_run_excludes_run_test(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    run = repo.start_run("suite")
+    result = TestResult(
+        id=str(uuid.uuid4()),
+        run_id=run.id,
+        test_case_id=tc.id,
+        status=TestStatus.passed,
+        duration_ms=100,
+    )
+    repo.save_result(result)
+    never_run = repo.get_never_run_test_cases()
+    assert not any(tc_item.id == tc.id for tc_item in never_run)
+
+
+def test_get_always_failing_test_cases(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    run = repo.start_run("suite")
+    result = TestResult(
+        id=str(uuid.uuid4()),
+        run_id=run.id,
+        test_case_id=tc.id,
+        status=TestStatus.failed,
+        duration_ms=100,
+    )
+    repo.save_result(result)
+    always_failing = repo.get_always_failing_test_cases()
+    assert any(tc_item.id == tc.id for tc_item in always_failing)
+
+
+def test_list_runs_empty(repo):
+    assert repo.list_runs() == []
+
+
+def test_list_runs_returns_most_recent_first(repo):
+    import time
+    run_a = repo.start_run("suite-a")
+    time.sleep(0.01)  # Ensure different timestamp
+    run_b = repo.start_run("suite-b")
+    runs = repo.list_runs()
+    assert len(runs) == 2
+    # Verify by ID since suite-b was started more recently
+    assert runs[0].id == run_b.id
+
+
+def test_get_results_for_run(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    run = repo.start_run("suite")
+    r = TestResult(
+        id=str(uuid.uuid4()),
+        run_id=run.id,
+        test_case_id=tc.id,
+        status=TestStatus.passed,
+        duration_ms=150,
+    )
+    repo.save_result(r)
+    results = repo.get_results_for_run(run.id)
+    assert len(results) == 1
+    assert results[0].run_id == run.id
