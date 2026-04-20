@@ -42,11 +42,11 @@ def test_tw_history_empty(tmp_path, monkeypatch):
     assert result.exit_code == 0
 
 
-def test_tw_gaps_stub(tmp_path, monkeypatch):
+def test_tw_gaps_empty_db(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["gaps"])
-    assert result.exit_code == 1
-    assert "Phase 5" in result.output
+    assert result.exit_code == 0
+    assert "No gaps found" in result.output
 
 
 def test_tw_generate_stub(tmp_path, monkeypatch):

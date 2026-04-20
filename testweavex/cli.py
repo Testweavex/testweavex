@@ -144,13 +144,40 @@ def history(
 
 @app.command()
 def gaps(
-    limit: int = typer.Option(10, "--limit"),
-    min_score: float = typer.Option(0.0, "--min-score"),
-    generate: bool = typer.Option(False, "--generate"),
+    limit: int = typer.Option(10, "--limit", help="Max gaps to show"),
+    min_score: float = typer.Option(0.0, "--min-score", help="Minimum priority score"),
+    generate: bool = typer.Option(False, "--generate", help="Generate tests for top gaps"),
 ) -> None:
-    """Show automation gap analysis. (Requires Phase 5)"""
-    console.print("[red]tw gaps requires Phase 5 — not yet available.[/red]")
-    raise typer.Exit(code=1)
+    """Show and optionally generate tests for automation gaps."""
+    from testweavex.events import EventBus
+    from testweavex.gap.analyzer import GapAnalyzer
+    repo = _get_repo()
+    bus = EventBus()
+    config = load_config()
+    analyzer = GapAnalyzer(repo, bus, config.gap_analysis)
+
+    runs = repo.list_runs(limit=1)
+    run_id = runs[0].id if runs else "standalone"
+
+    analyzer.run(run_id, collected_ids=[])
+    all_gaps = repo.get_gaps(limit=limit, status="open")
+    filtered = [g for g in all_gaps if g.priority_score >= min_score]
+
+    if not filtered:
+        console.print("No gaps found matching criteria.")
+        return
+
+    table = Table(title=f"Top {len(filtered)} Automation Gaps")
+    table.add_column("Score", justify="right")
+    table.add_column("Reason")
+    table.add_column("Test Case ID")
+    for g in filtered:
+        table.add_row(
+            f"{g.priority_score:.3f}",
+            g.gap_reason,
+            g.test_case_id[:16] + "...",
+        )
+    console.print(table)
 
 
 @app.command()
