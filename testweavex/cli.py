@@ -192,11 +192,16 @@ def generate(
 
 @app.command()
 def serve(
-    port: int = typer.Option(8080, "--port"),
+    port: int = typer.Option(8080, "--port", help="Port to listen on"),
+    host: str = typer.Option("127.0.0.1", "--host", help="Host to bind"),
 ) -> None:
-    """Start the TestWeaveX web UI. (Requires Phase 6)"""
-    console.print("[red]tw serve requires Phase 6 — not yet available.[/red]")
-    raise typer.Exit(code=1)
+    """Start the TestWeaveX web UI."""
+    import uvicorn
+    from testweavex.web.app import create_app
+    config = load_config()
+    application = create_app(config)
+    console.print(f"[green]TestWeaveX UI:[/green] http://{host}:{port}")
+    uvicorn.run(application, host=host, port=port)
 
 
 @app.command()

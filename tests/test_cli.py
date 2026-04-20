@@ -56,11 +56,11 @@ def test_tw_generate_stub(tmp_path, monkeypatch):
     assert "Phase 5" in result.output
 
 
-def test_tw_serve_stub(tmp_path, monkeypatch):
+def test_tw_serve_is_registered(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    result = runner.invoke(app, ["serve"])
-    assert result.exit_code == 1
-    assert "Phase 6" in result.output
+    result = runner.invoke(app, ["serve", "--help"])
+    assert result.exit_code == 0
+    assert "port" in result.output.lower()
 
 
 def test_tw_migrate_stub(tmp_path, monkeypatch):
