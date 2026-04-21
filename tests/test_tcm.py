@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -10,6 +10,7 @@ from testweavex.core.exceptions import ConfigError
 from testweavex.core.models import TestCase, TestType, generate_stable_id
 from testweavex.tcm import get_connector
 from testweavex.tcm.builtin import BuiltinTCMConnector
+from testweavex.tcm.testrail import TestRailConnector
 
 
 def test_get_connector_none_returns_builtin():
@@ -64,9 +65,6 @@ class TestBuiltinTCMConnector:
     def test_health_check_always_true(self):
         connector = BuiltinTCMConnector(MagicMock())
         assert connector.health_check() is True
-
-
-from testweavex.tcm.testrail import TestRailConnector
 
 
 def _make_tr_config(suite_id: int | None = None) -> dict:
