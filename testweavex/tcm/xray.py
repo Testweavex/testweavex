@@ -122,6 +122,6 @@ class XrayConnector(TCMConnector):
             if not page:
                 break
             issues.extend(_map_issue(i, self._project_key) for i in page)
-            start_at += max_results
+            start_at += len(page)
 
         return issues
