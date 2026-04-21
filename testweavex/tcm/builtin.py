@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from testweavex.storage.base import StorageRepository
 from testweavex.tcm.base import TCMConnector
-from testweavex.core.models import TestCase
 
 
 class BuiltinTCMConnector(TCMConnector):

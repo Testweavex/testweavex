@@ -17,14 +17,19 @@ def test_get_connector_none_returns_builtin():
     assert isinstance(connector, BuiltinTCMConnector)
 
 
-def test_get_connector_builtin_returns_builtin():
+def test_get_connector_builtin_alias_raises_config_error():
     cfg = TCMConfig(provider="builtin")
-    repo = MagicMock()
-    connector = get_connector(cfg, repo=repo)
-    assert isinstance(connector, BuiltinTCMConnector)
+    with pytest.raises(ConfigError, match="Unknown TCM provider"):
+        get_connector(cfg)
 
 
 def test_get_connector_unknown_raises_config_error():
     cfg = TCMConfig(provider="jira-cloud")
     with pytest.raises(ConfigError, match="Unknown TCM provider"):
         get_connector(cfg)
+
+
+def test_get_connector_none_without_repo_raises():
+    cfg = TCMConfig(provider="none")
+    with pytest.raises(ConfigError, match="requires a StorageRepository"):
+        get_connector(cfg)  # repo=None by default

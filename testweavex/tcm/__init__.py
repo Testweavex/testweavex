@@ -12,7 +12,7 @@ def get_connector(
 ) -> TCMConnector:
     provider = config.provider.lower()
 
-    if provider in ("none", "builtin"):
+    if provider == "none":
         from testweavex.tcm.builtin import BuiltinTCMConnector
         if repo is None:
             raise ConfigError("BuiltinTCMConnector requires a StorageRepository")
