@@ -11,6 +11,7 @@ from testweavex.core.models import TestCase, TestType, generate_stable_id
 from testweavex.tcm import get_connector
 from testweavex.tcm.builtin import BuiltinTCMConnector
 from testweavex.tcm.testrail import TestRailConnector
+from testweavex.tcm.xray import XrayConnector
 
 
 def test_get_connector_none_returns_builtin():
@@ -190,4 +191,124 @@ class TestTestRailConnector:
         mock_client.get.return_value = err_resp
         connector = TestRailConnector(_make_tr_config(suite_id=45), client=mock_client)
         with pytest.raises(TCMConnectorError):
+            connector.fetch_all_test_cases()
+
+
+def _make_xray_config() -> dict:
+    return {
+        "jira_url": "https://company.atlassian.net",
+        "client_id": "CLIENT_ID",
+        "client_secret": "CLIENT_SECRET",
+        "project_key": "QA",
+    }
+
+
+def _xray_issue(key: str = "QA-1", summary: str = "Login test",
+                priority: str = "High", labels: list | None = None,
+                description: str | None = None) -> dict:
+    return {
+        "key": key,
+        "fields": {
+            "summary": summary,
+            "priority": {"name": priority},
+            "labels": labels or [],
+            "created": "2023-01-15T10:30:00.000+0000",
+            "updated": "2023-06-20T12:00:00.000+0000",
+            "description": description,
+        },
+    }
+
+
+class TestXrayConnector:
+    def test_health_check_returns_true_on_200(self):
+        mock_client = MagicMock()
+        mock_client.post.return_value = _mock_response("jwt-token-string")
+        mock_client.post.return_value.text = "jwt-token-string"
+        mock_client.get.return_value = _mock_response({"key": "QA"})
+        connector = XrayConnector(_make_xray_config(), client=mock_client)
+        assert connector.health_check() is True
+
+    def test_health_check_returns_false_on_auth_failure(self):
+        mock_client = MagicMock()
+        mock_client.post.side_effect = Exception("Auth failed")
+        connector = XrayConnector(_make_xray_config(), client=mock_client)
+        assert connector.health_check() is False
+
+    def test_fetch_maps_issue_to_test_case(self):
+        mock_client = MagicMock()
+        auth_resp = MagicMock()
+        auth_resp.text = '"jwt-token-string"'
+        auth_resp.json.return_value = "jwt-token-string"
+        auth_resp.raise_for_status = MagicMock()
+        search_page1 = _mock_response({
+            "total": 1,
+            "startAt": 0,
+            "maxResults": 100,
+            "issues": [_xray_issue("QA-1", "Login test", "High", ["automated"],
+                                    "Scenario: Login\n  Given I open login page")],
+        })
+        search_page2 = _mock_response({
+            "total": 1, "startAt": 100, "maxResults": 100, "issues": [],
+        })
+        mock_client.post.return_value = auth_resp
+        mock_client.get.side_effect = [search_page1, search_page2]
+        connector = XrayConnector(_make_xray_config(), client=mock_client)
+        result = connector.fetch_all_test_cases()
+        assert len(result) == 1
+        tc = result[0]
+        assert tc.title == "Login test"
+        assert tc.tcm_id == "QA-1"
+        assert tc.is_automated is True
+        assert tc.priority == 1
+        assert "Scenario: Login" in tc.gherkin
+
+    def test_fetch_uses_gherkin_fallback_when_no_description(self):
+        mock_client = MagicMock()
+        auth_resp = MagicMock()
+        auth_resp.text = '"jwt-token-string"'
+        auth_resp.json.return_value = "jwt-token-string"
+        auth_resp.raise_for_status = MagicMock()
+        mock_client.post.return_value = auth_resp
+        mock_client.get.side_effect = [
+            _mock_response({
+                "total": 1, "startAt": 0, "maxResults": 100,
+                "issues": [_xray_issue("QA-2", "Edge case", description=None)],
+            }),
+            _mock_response({"total": 1, "startAt": 100, "maxResults": 100, "issues": []}),
+        ]
+        connector = XrayConnector(_make_xray_config(), client=mock_client)
+        result = connector.fetch_all_test_cases()
+        assert 'Scenario: Edge case' in result[0].gherkin
+
+    def test_fetch_paginates_correctly(self):
+        mock_client = MagicMock()
+        auth_resp = MagicMock()
+        auth_resp.text = '"jwt-token-string"'
+        auth_resp.raise_for_status = MagicMock()
+        mock_client.post.return_value = auth_resp
+        mock_client.get.side_effect = [
+            _mock_response({
+                "total": 2, "startAt": 0, "maxResults": 1,
+                "issues": [_xray_issue("QA-1")],
+            }),
+            _mock_response({
+                "total": 2, "startAt": 1, "maxResults": 1,
+                "issues": [_xray_issue("QA-2")],
+            }),
+            _mock_response({
+                "total": 2, "startAt": 2, "maxResults": 1, "issues": [],
+            }),
+        ]
+        connector = XrayConnector(_make_xray_config(), client=mock_client)
+        result = connector.fetch_all_test_cases()
+        assert len(result) == 2
+
+    def test_auth_failure_raises_tcm_connector_error(self):
+        from testweavex.core.exceptions import TCMConnectorError
+        mock_client = MagicMock()
+        bad_resp = _mock_response({"error": "Unauthorized"}, status_code=401)
+        bad_resp.raise_for_status.side_effect = Exception("401 Unauthorized")
+        mock_client.post.return_value = bad_resp
+        connector = XrayConnector(_make_xray_config(), client=mock_client)
+        with pytest.raises(TCMConnectorError, match="Xray authentication failed"):
             connector.fetch_all_test_cases()
