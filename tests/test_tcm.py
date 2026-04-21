@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
 
 from testweavex.core.config import TCMConfig
 from testweavex.core.exceptions import ConfigError
+from testweavex.core.models import TestCase, TestType, generate_stable_id
 from testweavex.tcm import get_connector
 from testweavex.tcm.builtin import BuiltinTCMConnector
 
@@ -33,10 +35,6 @@ def test_get_connector_none_without_repo_raises():
     cfg = TCMConfig(provider="none")
     with pytest.raises(ConfigError, match="requires a StorageRepository"):
         get_connector(cfg)  # repo=None by default
-
-
-from testweavex.core.models import TestCase, TestType, TestStatus, generate_stable_id
-from datetime import datetime, timezone
 
 
 def _make_tc(title: str = "Login test") -> TestCase:
