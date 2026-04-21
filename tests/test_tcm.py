@@ -33,3 +33,36 @@ def test_get_connector_none_without_repo_raises():
     cfg = TCMConfig(provider="none")
     with pytest.raises(ConfigError, match="requires a StorageRepository"):
         get_connector(cfg)  # repo=None by default
+
+
+from testweavex.core.models import TestCase, TestType, TestStatus, generate_stable_id
+from datetime import datetime, timezone
+
+
+def _make_tc(title: str = "Login test") -> TestCase:
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    return TestCase(
+        id=generate_stable_id("features/login.feature", title),
+        title=title,
+        feature_id=generate_stable_id("features/login.feature"),
+        gherkin="Scenario: Login\n  Given I am on login page",
+        test_type=TestType.smoke,
+        skill="builtin",
+        created_at=now,
+        updated_at=now,
+    )
+
+
+class TestBuiltinTCMConnector:
+    def test_fetch_all_delegates_to_repo(self):
+        repo = MagicMock()
+        tc = _make_tc()
+        repo.get_all_test_cases.return_value = [tc]
+        connector = BuiltinTCMConnector(repo)
+        result = connector.fetch_all_test_cases()
+        assert result == [tc]
+        repo.get_all_test_cases.assert_called_once()
+
+    def test_health_check_always_true(self):
+        connector = BuiltinTCMConnector(MagicMock())
+        assert connector.health_check() is True
