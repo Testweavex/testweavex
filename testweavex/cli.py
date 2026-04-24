@@ -12,6 +12,7 @@ from rich.table import Table
 
 from testweavex.core.config import load_config
 from testweavex.storage.sqlite import SQLiteRepository
+from testweavex.tcm import get_connector
 
 app = typer.Typer(
     name="tw",
@@ -206,12 +207,63 @@ def serve(
 
 @app.command()
 def migrate(
-    source: str = typer.Option(..., "--source"),
-    dry_run: bool = typer.Option(False, "--dry-run"),
+    source: str = typer.Option(..., "--source", help="TCM source: testrail or xray"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing"),
 ) -> None:
-    """Migrate from external TCM. (Requires Phase 7)"""
-    console.print("[red]tw migrate requires Phase 7 — not yet available.[/red]")
-    raise typer.Exit(code=1)
+    """Import test cases from an external TCM into TestWeaveX."""
+    import re
+
+    config = load_config()
+    if config.tcm.provider.lower() != source.lower():
+        console.print(
+            f"[red]Source mismatch:[/red] config has provider=[bold]{config.tcm.provider}[/bold]"
+            f" but --source={source}"
+        )
+        raise typer.Exit(code=1)
+
+    connector = get_connector(config.tcm)
+    if not connector.health_check():
+        console.print(f"[red]Cannot connect to {source}. Check your config credentials.[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"Fetching test cases from {source}…")
+    test_cases = connector.fetch_all_test_cases()
+
+    if dry_run:
+        table = Table(title=f"Dry Run — {len(test_cases)} test case(s) from {source}")
+        table.add_column("TCM ID")
+        table.add_column("Title")
+        table.add_column("Automated")
+        for tc in test_cases:
+            table.add_row(tc.tcm_id or "", tc.title, "yes" if tc.is_automated else "no")
+        console.print(table)
+        return
+
+    repo = _get_repo()
+    features_dir = Path(config.features_dir or "features")
+    features_dir.mkdir(parents=True, exist_ok=True)
+
+    def _safe_filename(title: str) -> str:
+        return re.sub(r"[^\w\s-]", "", title).strip().replace(" ", "_").lower()[:80]
+
+    errors: list[str] = []
+    for tc in test_cases:
+        try:
+            repo.upsert_test_case(tc)
+            feature_path = features_dir / f"{_safe_filename(tc.title)}.feature"
+            feature_path.write_text(
+                f"Feature: {tc.title}\n\n{tc.gherkin}\n",
+                encoding="utf-8",
+            )
+        except Exception as exc:
+            errors.append(f"{tc.tcm_id}: {exc}")
+
+    console.print(f"[green]Imported {len(test_cases) - len(errors)} test case(s)[/green]"
+                  f" → {features_dir}")
+    if errors:
+        console.print(f"[yellow]{len(errors)} error(s):[/yellow]")
+        for e in errors:
+            console.print(f"  {e}")
 
 
 @app.command()
