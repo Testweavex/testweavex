@@ -1,6 +1,11 @@
 import json
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
 from typer.testing import CliRunner
+
 from testweavex.cli import app
+from testweavex.core.models import TestCase, TestType, TestStatus, generate_stable_id
 
 runner = CliRunner()
 
@@ -76,10 +81,6 @@ def test_tw_sync_stub(tmp_path, monkeypatch):
     result = runner.invoke(app, ["sync", "--tcm", "testrail"])
     assert result.exit_code == 1
 
-
-from unittest.mock import MagicMock, patch
-from datetime import datetime, timezone
-from testweavex.core.models import TestCase, TestType, TestStatus, generate_stable_id
 
 
 def _cli_test_case(title: str = "Login test") -> TestCase:

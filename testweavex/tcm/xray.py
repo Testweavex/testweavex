@@ -8,7 +8,7 @@ from testweavex.core.exceptions import TCMConnectorError
 from testweavex.core.models import TestCase, TestType, TestStatus, generate_stable_id
 from testweavex.tcm.base import TCMConnector
 
-_XRAY_AUTH_URL = "https://xray.cloud.getxray.app/api/v2/authenticate"
+_XRAY_AUTH_URL = "https://xray.cloud.getxray.app/api/v2/authenticate"  # Cloud edition only
 
 _PRIORITY_MAP = {
     "blocker": 1, "critical": 1, "highest": 1,
@@ -99,7 +99,7 @@ class XrayConnector(TCMConnector):
     def fetch_all_test_cases(self) -> list[TestCase]:
         token = self._authenticate()
         headers = {"Authorization": f"Bearer {token}"}
-        jql = f"project={self._project_key}+AND+issuetype=Test"
+        jql = f"project={self._project_key} AND issuetype=Test"
         issues: list[TestCase] = []
         start_at = 0
         max_results = 100

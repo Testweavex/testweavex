@@ -15,7 +15,7 @@ def _unix_to_dt(ts: int) -> datetime:
 
 def _map_priority(priority_id: int) -> int:
     """TestRail priority_id: 1=Critical, 2=High, 3=Medium, 4=Low → TestWeaveX 1–3."""
-    return min(priority_id, 3)
+    return max(1, min(priority_id, 3))
 
 
 def _build_gherkin(case: dict) -> str:

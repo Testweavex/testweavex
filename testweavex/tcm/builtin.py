@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from testweavex.core.models import TestCase
 from testweavex.storage.base import StorageRepository
 from testweavex.tcm.base import TCMConnector
 
