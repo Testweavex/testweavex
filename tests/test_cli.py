@@ -72,9 +72,9 @@ def test_tw_migrate_stub(tmp_path, monkeypatch):
 
 def test_tw_sync_stub(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    # No config file: provider defaults to "none", mismatches "testrail" → exit 1
     result = runner.invoke(app, ["sync", "--tcm", "testrail"])
     assert result.exit_code == 1
-    assert "Phase 7" in result.output
 
 
 from unittest.mock import MagicMock, patch
@@ -160,3 +160,43 @@ def test_migrate_health_check_failure_aborts(tmp_path, monkeypatch):
 
     assert result.exit_code != 0
     assert "connect" in result.output.lower() or "health" in result.output.lower() or "failed" in result.output.lower()
+
+
+def test_sync_upserts_test_cases_no_files(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    config_file = tmp_path / "testweavex.config.yaml"
+    config_file.write_text("tcm:\n  provider: testrail\n  testrail:\n    url: https://t.io\n    username: u\n    api_key: k\n    project_id: 12\n")
+
+    mock_connector = MagicMock()
+    mock_connector.health_check.return_value = True
+    mock_connector.fetch_all_test_cases.return_value = [_cli_test_case()]
+
+    with patch("testweavex.cli.get_connector", return_value=mock_connector):
+        result = runner.invoke(app, ["sync", "--tcm", "testrail"])
+
+    assert result.exit_code == 0
+    assert not (tmp_path / "features").exists()
+    assert "1" in result.output or "synced" in result.output.lower() or "imported" in result.output.lower()
+
+
+def test_sync_tcm_mismatch_exits_with_error(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    config_file = tmp_path / "testweavex.config.yaml"
+    config_file.write_text("tcm:\n  provider: xray\n  xray:\n    jira_url: https://j.io\n    client_id: c\n    client_secret: s\n    project_key: QA\n")
+
+    result = runner.invoke(app, ["sync", "--tcm", "testrail"])
+    assert result.exit_code != 0
+
+
+def test_sync_health_check_failure_aborts(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    config_file = tmp_path / "testweavex.config.yaml"
+    config_file.write_text("tcm:\n  provider: testrail\n  testrail:\n    url: https://t.io\n    username: u\n    api_key: k\n    project_id: 12\n")
+
+    mock_connector = MagicMock()
+    mock_connector.health_check.return_value = False
+
+    with patch("testweavex.cli.get_connector", return_value=mock_connector):
+        result = runner.invoke(app, ["sync", "--tcm", "testrail"])
+
+    assert result.exit_code != 0

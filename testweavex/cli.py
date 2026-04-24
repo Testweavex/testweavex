@@ -268,11 +268,40 @@ def migrate(
 
 @app.command()
 def sync(
-    tcm: str = typer.Option(..., "--tcm"),
+    tcm: str = typer.Option(..., "--tcm", help="TCM provider: testrail or xray"),
 ) -> None:
-    """Sync results to external TCM. (Requires Phase 7)"""
-    console.print("[red]tw sync requires Phase 7 — not yet available.[/red]")
-    raise typer.Exit(code=1)
+    """Pull test cases from external TCM into TestWeaveX (one-way sync)."""
+    config = load_config()
+    if config.tcm.provider.lower() != tcm.lower():
+        console.print(
+            f"[red]Provider mismatch:[/red] config has provider=[bold]{config.tcm.provider}[/bold]"
+            f" but --tcm={tcm}"
+        )
+        raise typer.Exit(code=1)
+
+    connector = get_connector(config.tcm)
+    if not connector.health_check():
+        console.print(f"[red]Cannot connect to {tcm}. Check your config credentials.[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"Syncing test cases from {tcm}…")
+    test_cases = connector.fetch_all_test_cases()
+
+    repo = _get_repo()
+    errors: list[str] = []
+    for tc in test_cases:
+        try:
+            repo.upsert_test_case(tc)
+        except Exception as exc:
+            errors.append(f"{tc.tcm_id}: {exc}")
+
+    console.print(
+        f"[green]Synced {len(test_cases) - len(errors)} test case(s)[/green] from {tcm}"
+    )
+    if errors:
+        console.print(f"[yellow]{len(errors)} error(s):[/yellow]")
+        for e in errors:
+            console.print(f"  {e}")
 
 
 def main() -> None:
