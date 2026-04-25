@@ -83,6 +83,19 @@ def _orm_to_gap(row: GapORM) -> Gap:
     )
 
 
+def _orm_to_test_result(row: TestResultORM) -> TestResult:
+    return TestResult(
+        id=row.id,
+        run_id=row.run_id,
+        test_case_id=row.test_case_id,
+        status=TestStatus(row.status),
+        duration_ms=row.duration_ms,
+        error_message=row.error_message,
+        screenshot_path=row.screenshot_path,
+        retry_count=row.retry_count,
+    )
+
+
 class SQLiteRepository(StorageRepository):
 
     def __init__(self, db_url: str | None = None) -> None:
@@ -350,3 +363,81 @@ class SQLiteRepository(StorageRepository):
             executions_90d=executions_90d,
             days_since_run=days_since,
         )
+
+    # ── Query Methods ─────────────────────────────────────────────────────
+
+    def get_all_test_cases(self) -> list[TestCase]:
+        try:
+            with self._session() as s:
+                rows = s.query(TestCaseORM).all()
+                return [_orm_to_test_case(r) for r in rows]
+        except Exception as exc:
+            raise StorageError("Failed to get all test cases") from exc
+
+    def get_never_run_test_cases(self) -> list[TestCase]:
+        sql = text("""
+            SELECT tc.id FROM test_cases tc
+            LEFT JOIN test_results tr ON tc.id = tr.test_case_id
+            WHERE tr.id IS NULL
+        """)
+        try:
+            with self._session() as s:
+                rows = s.execute(sql).fetchall()
+                result = []
+                for (tc_id,) in rows:
+                    try:
+                        result.append(self.get_test_case(tc_id))
+                    except RecordNotFound:
+                        pass
+                return result
+        except StorageError:
+            raise
+        except Exception as exc:
+            raise StorageError("Failed to get never-run test cases") from exc
+
+    def get_always_failing_test_cases(self) -> list[TestCase]:
+        sql = text("""
+            SELECT test_case_id FROM test_results
+            GROUP BY test_case_id
+            HAVING SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) = 0
+               AND COUNT(*) > 0
+        """)
+        try:
+            with self._session() as s:
+                rows = s.execute(sql).fetchall()
+                result = []
+                for (tc_id,) in rows:
+                    try:
+                        result.append(self.get_test_case(tc_id))
+                    except RecordNotFound:
+                        pass
+                return result
+        except StorageError:
+            raise
+        except Exception as exc:
+            raise StorageError("Failed to get always-failing test cases") from exc
+
+    def list_runs(self, limit: int = 50) -> list[TestRun]:
+        try:
+            with self._session() as s:
+                rows = (
+                    s.query(TestRunORM)
+                    .order_by(TestRunORM.started_at.desc())
+                    .limit(limit)
+                    .all()
+                )
+                return [_orm_to_test_run(r) for r in rows]
+        except Exception as exc:
+            raise StorageError("Failed to list runs") from exc
+
+    def get_results_for_run(self, run_id: str) -> list[TestResult]:
+        try:
+            with self._session() as s:
+                rows = (
+                    s.query(TestResultORM)
+                    .filter(TestResultORM.run_id == run_id)
+                    .all()
+                )
+                return [_orm_to_test_result(r) for r in rows]
+        except Exception as exc:
+            raise StorageError(f"Failed to get results for run {run_id}") from exc
