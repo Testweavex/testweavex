@@ -50,7 +50,7 @@ No lock-in. Bring your own LLM (OpenAI, Anthropic, Ollama, Azure). Keep using py
 ### Install
 
 ```bash
-pip install testweavex
+pip install git+https://github.com/testweavex/testweavex.git
 ```
 
 ### Initialise
