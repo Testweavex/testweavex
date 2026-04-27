@@ -91,6 +91,46 @@ class TestGetLLMAdapter:
         with pytest.raises(ConfigError):
             get_llm_adapter(_config("unknown-provider"))
 
+    @patch("testweavex.llm.ollama.openai.OpenAI")
+    def test_get_llm_adapter_ollama_returns_ollama_adapter(self, _mock):
+        from testweavex.llm.base import get_llm_adapter
+        from testweavex.llm.ollama import OllamaAdapter
+
+        cfg = _config("openai")
+        cfg.llm.provider = "ollama"
+        adapter = get_llm_adapter(cfg)
+        assert isinstance(adapter, OllamaAdapter)
+
+    @patch("testweavex.llm.azure.openai.AzureOpenAI")
+    def test_get_llm_adapter_azure_returns_azure_adapter(self, _mock):
+        from testweavex.llm.base import get_llm_adapter
+        from testweavex.llm.azure import AzureOpenAIAdapter
+        from testweavex.core.config import LLMConfig
+
+        cfg = _config("openai")
+        cfg.llm = LLMConfig(
+            provider="azure",
+            model="gpt-4",
+            api_key="key",
+            azure_endpoint="https://x.openai.azure.com/",
+            api_version="2024-02-01",
+            deployment_name="gpt-4-prod",
+        )
+        adapter = get_llm_adapter(cfg)
+        assert isinstance(adapter, AzureOpenAIAdapter)
+
+    def test_get_llm_adapter_unknown_provider_error_message_lists_all_four(self):
+        from testweavex.llm.base import get_llm_adapter
+        from testweavex.core.exceptions import ConfigError
+
+        cfg = _config("openai")
+        cfg.llm.provider = "unknown"
+        with pytest.raises(ConfigError) as exc_info:
+            get_llm_adapter(cfg)
+        msg = str(exc_info.value)
+        assert "ollama" in msg
+        assert "azure" in msg
+
 
 # ── OpenAI adapter tests ───────────────────────────────────────────────────────
 
