@@ -91,7 +91,7 @@ class TestServerRepository:
         repo = ServerRepository("http://server:8000")
         repo.end_run("run-123")
 
-        mock_client.patch.assert_called_once_with("/runs/run-123")
+        mock_client.patch.assert_called_once_with("/runs/run-123", json=None)
 
     @patch("testweavex.storage.server.httpx.Client")
     def test_upsert_test_case_puts_test_case(self, mock_cls):
@@ -191,3 +191,16 @@ class TestServerRepository:
 
         _, kwargs = mock_cls.call_args
         assert "Authorization" not in kwargs["headers"]
+
+    @patch("testweavex.storage.server.httpx.Client")
+    def test_request_error_raises_storage_error(self, mock_cls):
+        import httpx
+        from testweavex.core.exceptions import StorageError
+        from testweavex.storage.server import ServerRepository
+
+        mock_client = mock_cls.return_value
+        mock_client.get.side_effect = httpx.ConnectError("connection refused")
+
+        repo = ServerRepository("http://server:8000")
+        with pytest.raises(StorageError):
+            repo.get_coverage_percentage()

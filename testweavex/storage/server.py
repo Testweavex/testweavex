@@ -33,7 +33,7 @@ class ServerRepository(StorageRepository):
             resp = self._client.get(path)
             resp.raise_for_status()
             return resp
-        except httpx.HTTPStatusError as exc:
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             raise StorageError(f"Server error on GET {path}: {exc}") from exc
 
     def _post(self, path: str, data: object) -> httpx.Response:
@@ -41,7 +41,7 @@ class ServerRepository(StorageRepository):
             resp = self._client.post(path, json=data)
             resp.raise_for_status()
             return resp
-        except httpx.HTTPStatusError as exc:
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             raise StorageError(f"Server error on POST {path}: {exc}") from exc
 
     def _put(self, path: str, data: object) -> httpx.Response:
@@ -49,15 +49,15 @@ class ServerRepository(StorageRepository):
             resp = self._client.put(path, json=data)
             resp.raise_for_status()
             return resp
-        except httpx.HTTPStatusError as exc:
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             raise StorageError(f"Server error on PUT {path}: {exc}") from exc
 
-    def _patch(self, path: str) -> httpx.Response:
+    def _patch(self, path: str, data: object | None = None) -> httpx.Response:
         try:
-            resp = self._client.patch(path)
+            resp = self._client.patch(path, json=data)
             resp.raise_for_status()
             return resp
-        except httpx.HTTPStatusError as exc:
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             raise StorageError(f"Server error on PATCH {path}: {exc}") from exc
 
     # ── StorageRepository interface ───────────────────────────────────────────
