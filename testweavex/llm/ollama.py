@@ -75,7 +75,10 @@ class OllamaAdapter(LLMAdapter):
                 resp = self._client.chat.completions.create(
                     model=self._config.model,
                     temperature=self._config.temperature,
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": _SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
                 )
                 raw = resp.choices[0].message.content
                 data = json.loads(raw)
@@ -100,7 +103,10 @@ class OllamaAdapter(LLMAdapter):
                 resp = self._client.chat.completions.create(
                     model=self._config.model,
                     temperature=self._config.temperature,
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": _SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
                 )
                 raw = resp.choices[0].message.content
                 data = json.loads(raw)
@@ -133,7 +139,10 @@ class OllamaAdapter(LLMAdapter):
         try:
             self._client.chat.completions.create(
                 model=self._config.model,
-                messages=[{"role": "user", "content": "ping"}],
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": "ping"},
+                ],
                 max_tokens=1,
             )
             return True
