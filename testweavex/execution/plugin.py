@@ -7,20 +7,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from rich.console import Console
-from rich.table import Table
 
 from testweavex.core.config import load_config
 from testweavex.core.models import (
     TestCase,
-    TestResult,
     TestStatus,
     TestType,
     generate_stable_id,
 )
 from testweavex.events import (
     EventBus,
-    GapAnalysisComplete,
     RunStarted,
     SessionFinished,
     TestCollected,
@@ -37,14 +33,11 @@ def _now() -> datetime:
 
 
 def _build_repo(config: pytest.Config) -> "StorageRepository":
-    server_url = (
-        config.getoption("--results-server", default=None)
-        or None
-    )
+    server_url = config.getoption("--results-server", default=None) or None
     if server_url:
         token = config.getoption("--token", default=None)
-        # ServerRepository will be implemented in a future phase
-        raise NotImplementedError("Remote result server not yet supported")
+        from testweavex.storage.server import ServerRepository
+        return ServerRepository(server_url, token)
     db_dir = Path(str(config.rootpath)) / ".testweavex"
     db_dir.mkdir(exist_ok=True)
     return SQLiteRepository(db_url=f"sqlite:///{db_dir / 'results.db'}")
@@ -75,78 +68,21 @@ def _get_skill(item: pytest.Item) -> str:
     return "functional/smoke"
 
 
-class _StorageSubscriber:
-    def __init__(self, repo: "StorageRepository") -> None:
-        self._repo = repo
-
-    def register(self, bus: EventBus) -> None:
-        bus.subscribe("test_finished", self._on_finished)
-        bus.subscribe("session_finished", self._on_session)
-
-    def _on_finished(self, event: TestFinished) -> None:
-        result = TestResult(
-            id=event.result_id,
-            run_id=event.run_id,
-            test_case_id=event.test_case_id,
-            status=TestStatus(event.status),
-            duration_ms=event.duration_ms,
-            error_message=event.error_message,
-        )
-        self._repo.save_result(result)
-
-    def _on_session(self, event: SessionFinished) -> None:
-        self._repo.end_run(event.run_id)
-        self._repo.mark_uncollected_as_gaps(event.collected_ids)
-
-
-class _ConsoleSubscriber:
-    def __init__(self) -> None:
-        self._console = Console()
-
-    def register(self, bus: EventBus) -> None:
-        bus.subscribe("session_finished", self._on_session)
-        bus.subscribe("gap_analysis_complete", self._on_gaps)
-
-    def _on_session(self, event: SessionFinished) -> None:
-        table = Table(title="TestWeaveX Run Summary", show_header=True)
-        table.add_column("Metric", style="bold")
-        table.add_column("Value")
-        table.add_row("Run ID", event.run_id[:8] + "...")
-        table.add_row("Total", str(event.total))
-        table.add_row("Passed", f"[green]{event.passed}[/green]")
-        table.add_row("Failed", f"[red]{event.failed}[/red]")
-        table.add_row("Skipped", f"[yellow]{event.skipped}[/yellow]")
-        table.add_row("Duration", f"{event.duration_ms / 1000:.2f}s")
-        self._console.print(table)
-
-    def _on_gaps(self, event: GapAnalysisComplete) -> None:
-        self._console.print(
-            f"\n[bold yellow]Gap Analysis:[/bold yellow] "
-            f"{event.gaps_found} gaps found. "
-            f"Top {len(event.top_gaps)} shown below."
-        )
-        if event.top_gaps:
-            t = Table(show_header=True, header_style="bold")
-            t.add_column("Score")
-            t.add_column("Reason")
-            t.add_column("Test Case ID")
-            for g in event.top_gaps[:10]:
-                t.add_row(
-                    f"{g.get('priority_score', 0):.2f}",
-                    g.get("gap_reason", ""),
-                    g.get("test_case_id", "")[:16] + "...",
-                )
-            self._console.print(t)
-
-
 class _TestWeaveXPlugin:
     def __init__(self, config: pytest.Config) -> None:
         self._repo = _build_repo(config)
         self._bus = EventBus()
-        self._storage_sub = _StorageSubscriber(self._repo)
-        self._console_sub = _ConsoleSubscriber()
-        self._storage_sub.register(self._bus)
-        self._console_sub.register(self._bus)
+        from testweavex.reporters.console import ConsoleReporter
+        from testweavex.reporters.sqlite import SQLiteReporter
+
+        server_url = config.getoption("--results-server", default=None) or None
+        reporters = [ConsoleReporter(), SQLiteReporter(self._repo)]
+        if server_url:
+            from testweavex.reporters.server import ServerReporter
+            token = config.getoption("--token", default=None)
+            reporters.append(ServerReporter(server_url, token))
+        for r in reporters:
+            r.register(self._bus)
 
         suite = config.getoption("--suite", default="default")
         environment = config.getoption("--environment", default="local")
