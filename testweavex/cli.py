@@ -29,6 +29,12 @@ _SUBCOMMANDS = {
 
 
 def _get_repo() -> SQLiteRepository:
+    import os
+    url = os.getenv("DATABASE_URL")
+    if url:
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return SQLiteRepository(db_url=url)
     db_dir = Path.cwd() / ".testweavex"
     db_dir.mkdir(exist_ok=True)
     return SQLiteRepository(db_url=f"sqlite:///{db_dir / 'results.db'}")
