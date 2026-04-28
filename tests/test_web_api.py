@@ -120,3 +120,53 @@ def test_generate_endpoint_returns_503_on_config_error(client):
         })
 
     assert response.status_code == 503
+
+
+def test_gap_generate_returns_404_when_gap_not_found(client):
+    response = client.post("/api/gaps/nonexistent-gap-id/generate")
+    assert response.status_code == 404
+
+
+def test_gap_generate_returns_200_with_generation_response(client):
+    from datetime import datetime, timezone
+    from testweavex.core.models import (
+        Gap, GapStatus, TestCase, TestType, generate_stable_id,
+    )
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    tc_id = generate_stable_id("features/login.feature", "Login test")
+    gap = Gap(
+        id="gap-1",
+        test_case_id=tc_id,
+        priority_score=0.8,
+        gap_reason="never automated",
+        status=GapStatus.open,
+        detected_at=now,
+    )
+    tc = TestCase(
+        id=tc_id,
+        title="Login test",
+        feature_id=generate_stable_id("features/login.feature"),
+        gherkin="Scenario: Login\n  Given I am on login page",
+        test_type=TestType.smoke,
+        skill="functional/smoke",
+        is_automated=False,
+        created_at=now,
+        updated_at=now,
+    )
+
+    with patch("testweavex.web.api.gaps.get_llm_adapter") as mock_factory:
+        mock_adapter = MagicMock()
+        mock_adapter.health_check.return_value = True
+        mock_adapter.suggest_gap_automation.return_value = _mock_generation_response()
+        mock_factory.return_value = mock_adapter
+
+        repo = client.app.state.repo
+        repo.upsert_test_case(tc)
+        repo.save_gaps([gap])
+
+        response = client.post("/api/gaps/gap-1/generate")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "scenarios" in data
