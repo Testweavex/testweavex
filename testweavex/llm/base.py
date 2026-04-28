@@ -56,6 +56,20 @@ def _build_gap_prompt(test_case: TestCase) -> str:
     )
 
 
+def _build_step_prompt(scenarios: list[Scenario], existing_steps: list[str]) -> str:
+    gherkin_text = "\n\n".join(s.gherkin for s in scenarios)
+    existing_text = (
+        "\n".join(f"- {s}" for s in existing_steps) if existing_steps else "None"
+    )
+    return (
+        f"Feature scenarios:\n{gherkin_text}\n\n"
+        f"Already implemented steps (do NOT re-generate these):\n{existing_text}\n\n"
+        "Generate step definitions ONLY for steps not listed above.\n"
+        'Return JSON: {"new_steps": [{"step_text": "...", "implementation": "...", '
+        '"requires_new_module": false, "module_spec": null}]}'
+    )
+
+
 def get_llm_adapter(config: TestWeaveXConfig) -> LLMAdapter:
     provider = config.llm.provider
     if provider == "openai":

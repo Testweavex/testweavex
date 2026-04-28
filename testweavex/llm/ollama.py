@@ -17,7 +17,7 @@ from testweavex.core.models import (
     StepDefinitionResponse,
     TestCase,
 )
-from testweavex.llm.base import LLMAdapter, _build_gap_prompt, _deduplicate
+from testweavex.llm.base import LLMAdapter, _build_gap_prompt, _build_step_prompt, _deduplicate
 from testweavex.skills.loader import SkillLoader
 
 _SYSTEM_PROMPT = (
@@ -95,7 +95,6 @@ class OllamaAdapter(LLMAdapter):
     def generate_step_definitions(
         self, scenarios: list[Scenario], existing_steps: list[str]
     ) -> StepDefinitionResponse:
-        from testweavex.llm.openai import _build_step_prompt
         prompt = _build_step_prompt(scenarios, existing_steps)
         last_exc: Exception | None = None
         for _ in range(self._config.max_retries):
@@ -126,13 +125,15 @@ class OllamaAdapter(LLMAdapter):
 
     def suggest_gap_automation(self, manual_test: TestCase) -> GenerationResponse:
         prompt = _build_gap_prompt(manual_test)
+        start = time.monotonic()
         scenarios, tokens = self._call_with_retry(prompt, "gap_automation")
+        elapsed = int((time.monotonic() - start) * 1000)
         return GenerationResponse(
             scenarios=scenarios,
             skill_used="gap_automation",
             llm_model=self._config.model,
             tokens_used=tokens,
-            generation_time_ms=0,
+            generation_time_ms=elapsed,
         )
 
     def health_check(self) -> bool:

@@ -7,6 +7,8 @@ from testweavex.llm.base import get_llm_adapter
 
 router = APIRouter()
 
+_GAP_SCAN_LIMIT = 10_000
+
 
 @router.get("/gaps")
 async def list_gaps(
@@ -26,7 +28,7 @@ async def generate_for_gap(gap_id: str, request: Request) -> dict:
     repo = request.app.state.repo
     config = request.app.state.config
 
-    all_gaps = repo.get_gaps(limit=10000, status="open")
+    all_gaps = repo.get_gaps(limit=_GAP_SCAN_LIMIT, status="open")
     gap = next((g for g in all_gaps if g.id == gap_id), None)
     if gap is None:
         raise HTTPException(status_code=404, detail=f"Gap '{gap_id}' not found")
