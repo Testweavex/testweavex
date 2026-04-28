@@ -2,10 +2,12 @@
 
 > **Unified test management and execution — powered by any LLM. The AI suggests. You decide.**
 
-[![PyPI](https://img.shields.io/pypi/v/testweavex)](https://pypi.org/project/testweavex)
-[![Python](https://img.shields.io/pypi/pyversions/testweavex)](https://pypi.org/project/testweavex)
+[![GitHub](https://img.shields.io/badge/install-from%20GitHub-blue)](https://github.com/Testweavex/testweavex)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://github.com/testwavex/testweavex/actions/workflows/ci.yml/badge.svg)](https://github.com/testwavex/testweavex/actions)
+[![Tests](https://github.com/Testweavex/testweavex/actions/workflows/ci.yml/badge.svg)](https://github.com/Testweavex/testweavex/actions)
+
+> **Note:** TestWeaveX is not yet published to PyPI. Install directly from GitHub (see instructions below).
 
 ---
 
@@ -47,49 +49,278 @@ No lock-in. Bring your own LLM (OpenAI, Anthropic, Ollama, Azure). Keep using py
 
 ## Getting Started
 
+### Prerequisites
+
+- Python 3.11 or later
+- Git
+
 ### Install
 
+TestWeaveX is not yet on PyPI. Install directly from GitHub:
+
 ```bash
-pip install git+https://github.com/testweavex/testweavex.git
+pip install git+https://github.com/Testweavex/testweavex.git
+```
+
+To install a specific branch or tag:
+
+```bash
+pip install git+https://github.com/Testweavex/testweavex.git@main
 ```
 
 ### Initialise
 
+Run this once in your project root:
+
 ```bash
-tw init --llm-provider anthropic
+tw init --llm-provider anthropic   # or: openai | ollama | azure
 ```
 
-Creates `testweavex.config.yaml` in your project root and populates `testweavex/skills/` with the 10 built-in skill files.
+This creates `testweavex.config.yaml` with your LLM settings. Edit it to set your API key (or use an environment variable):
 
-### Run your tests
+```yaml
+llm:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  api_key: ${ANTHROPIC_API_KEY}
+```
+
+---
+
+## Running the TCM Locally
+
+TestWeaveX ships with a built-in TCM. No external database, server, or configuration is required — SQLite is the default. Everything is stored in `.testweavex/results.db` in your project folder and is ignored by Git automatically.
+
+### Step 1 — Import existing test cases (optional)
+
+If you have test cases in TestRail or Xray, import them once to seed the built-in TCM:
 
 ```bash
-tw                              # same as pytest — all flags work
-tw tests/login.feature          # run a specific feature
+# Configure your TCM connection first
+# testweavex.config.yaml:
+# tcm:
+#   provider: testrail
+#   base_url: https://yourcompany.testrail.io
+#   username: you@company.com
+#   api_key: YOUR_API_KEY
+
+# Preview what will be imported (no changes written)
+tw migrate --source testrail --dry-run
+
+# Run the import — writes test cases to SQLite and .feature files to disk
+tw migrate --source testrail
+```
+
+After this, TestRail is no longer needed. The built-in TCM is your source of truth.
+
+### Step 2 — Run your tests
+
+Every `tw` run is captured automatically:
+
+```bash
+tw                              # run all tests, same as pytest
+tw tests/login.feature          # run a specific feature file
 tw -k smoke -n 4                # filter by tag, run in parallel
 tw -v -x                        # verbose, stop on first failure
 ```
 
-Results are stored automatically in `.testweavex/results.db`. No configuration needed.
+Results are stored in `.testweavex/results.db` with no extra configuration.
 
-### View gap report
+### Step 3 — Open the Web UI
 
 ```bash
-tw gaps --limit 20
+tw serve                        # opens at http://localhost:8080
 ```
 
-Compares your TCM against your automation suite. Shows unautomated tests ranked by priority score. Add `--generate` to produce automation candidates for review.
+The Web UI shows your test cases, run history, coverage map, and automation gaps — all from the local SQLite database.
+
+### Step 4 — View gaps and coverage
+
+```bash
+tw gaps --limit 20              # top 20 unautomated tests by priority score
+tw gaps --min-score 0.7         # only high-priority gaps
+tw status                       # coverage summary by test type
+tw history                      # recent run history
+```
+
+---
+
+## Team & Cloud Deployment
+
+### Architecture
+
+```
+Developer machine          CI/CD pipeline             Central TCM server
+──────────────────         ──────────────────         ───────────────────────────
+tw                    →    tw --results-server    →    TestWeaveX + PostgreSQL
+SQLite (local only)        https://tcm.co.com         Web UI visible to everyone
+zero config                TESTWEAVEX_SERVER set       DATABASE_URL set on server
+```
+
+- **Developer machines** use SQLite by default — zero configuration, results stored locally in `.testweavex/results.db`.
+- **The central TCM** is a single deployed instance with a PostgreSQL backend. It is the shared source of truth for all CI/CD run results.
+- **CI/CD pipelines** push results to the central TCM using `--results-server` (or the `TESTWEAVEX_SERVER` environment variable). Developers can do the same optionally to contribute their local runs.
+- **PostgreSQL** gives the central TCM durable, concurrent storage that survives container restarts and scales across many CI agents writing simultaneously.
+
+---
+
+### Step 1 — Deploy the central TCM
+
+#### Option A — Docker Compose (recommended)
+
+**`Dockerfile`** (in your deployment repo or the same repo):
+
+```dockerfile
+FROM python:3.12-slim
+RUN pip install "git+https://github.com/Testweavex/testweavex.git[postgres]"
+CMD ["tw", "serve", "--host", "0.0.0.0", "--port", "8080"]
+```
+
+**`docker-compose.yml`:**
+
+```yaml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: testweavex
+      POSTGRES_USER: testweavex
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data   # survives container restarts and upgrades
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testweavex"]
+      interval: 5s
+      retries: 5
+
+  testweavex:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgresql://testweavex:${DB_PASSWORD}@db:5432/testweavex
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+```
+
+**`.env`** (never commit this file):
+
+```bash
+DB_PASSWORD=choose-a-strong-password
+```
+
+```bash
+docker compose up -d
+# Central TCM Web UI at http://your-server:8080
+```
+
+#### Option B — Self-hosted Linux / VM (systemd)
+
+```bash
+# On the server
+git clone https://github.com/Testweavex/testweavex.git /srv/testweavex
+cd /srv/testweavex
+pip install -e ".[postgres]"
+```
+
+```ini
+# /etc/systemd/system/testweavex.service
+[Unit]
+Description=TestWeaveX TCM
+After=network.target postgresql.service
+
+[Service]
+User=testweavex
+WorkingDirectory=/srv/testweavex
+Environment=DATABASE_URL=postgresql://testweavex:PASSWORD@localhost:5432/testweavex
+ExecStart=/usr/local/bin/tw serve --host 0.0.0.0 --port 8080
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now testweavex
+```
+
+#### Option C — Cloud (Fly.io, Render, Railway)
+
+Any platform that can run a Docker container and attach a managed PostgreSQL database works. Set `DATABASE_URL` to the managed database connection string the platform provides, then deploy the `Dockerfile` above.
+
+Example with Fly.io + managed Postgres:
+
+```bash
+fly launch --dockerfile Dockerfile
+fly postgres create --name testweavex-db
+fly postgres attach testweavex-db   # sets DATABASE_URL automatically
+fly deploy
+```
+
+#### (Recommended) Put the TCM behind HTTPS
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name tcm.yourcompany.com;
+
+    ssl_certificate     /etc/letsencrypt/live/tcm.yourcompany.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tcm.yourcompany.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+---
+
+### Step 2 — Connect CI/CD pipelines to the central TCM
+
+Add two secrets to your CI/CD system (`TW_SERVER`, `TW_TOKEN`) and pass them on every test run:
+
+```yaml
+# .github/workflows/test.yml
+- name: Install TestWeaveX
+  run: pip install git+https://github.com/Testweavex/testweavex.git
+
+- name: Run tests
+  env:
+    TESTWEAVEX_SERVER: ${{ secrets.TW_SERVER }}   # https://tcm.yourcompany.com
+    TESTWEAVEX_TOKEN: ${{ secrets.TW_TOKEN }}
+  run: tw
+```
+
+Results from every pipeline run appear immediately in the central TCM Web UI.
+
+---
+
+### Developer workflow (unchanged)
+
+Developers do not need to configure anything. `tw` on a developer machine continues to use local SQLite with no flags required:
+
+```bash
+tw                     # runs tests, stores results in .testweavex/results.db
+tw serve               # view results locally at http://localhost:8080
+```
+
+To optionally contribute a local run to the shared TCM:
+
+```bash
+tw --results-server https://tcm.yourcompany.com --token $TW_TOKEN
+```
 
 ### Generate tests
 
 ```bash
 tw generate --feature "User login with SSO" --skill functional/smoke
-```
-
-### Start the Web UI
-
-```bash
-tw serve                        # http://localhost:8080
 ```
 
 ---
@@ -309,7 +540,7 @@ testweavex/
 ## Development Setup
 
 ```bash
-git clone https://github.com/testwavex/testweavex
+git clone https://github.com/Testweavex/testweavex
 cd testweavex
 pip install -e ".[dev]"
 pytest tests/ -v
@@ -347,12 +578,14 @@ pytest tests/ -v
 
 ```yaml
 # .github/workflows/test.yml
+- name: Install TestWeaveX
+  run: pip install git+https://github.com/Testweavex/testweavex.git
+
 - name: Run tests
-  run: |
-    tw --suite regression \
-       --results-server ${{ secrets.TW_SERVER }} \
-       --token ${{ secrets.TW_TOKEN }} \
-       --sync-tcm testrail
+  env:
+    TESTWEAVEX_SERVER: ${{ secrets.TW_SERVER }}
+    TESTWEAVEX_TOKEN: ${{ secrets.TW_TOKEN }}
+  run: tw --results-server $TESTWEAVEX_SERVER --token $TESTWEAVEX_TOKEN
 ```
 
 ---
@@ -386,8 +619,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) (coming in Phase 8).
 ---
 
 ## Documentation
-
-Full documentation site: **https://testwavex.github.io/testweavex/**
 
 - [PRD](docs/PRD.md) — Full Product Requirements Document
 - [Architecture](docs/ARCHITECTURE.md) — Full Technical Architecture Specification

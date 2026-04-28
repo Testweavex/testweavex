@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -12,13 +13,23 @@ from testweavex.storage.sqlite import SQLiteRepository
 _STATIC_DIR = Path(__file__).parent / "static"
 
 
+def _resolve_db_url() -> str:
+    url = os.getenv("DATABASE_URL")
+    if url:
+        # Heroku / some cloud providers emit postgres:// — SQLAlchemy needs postgresql://
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+    db_dir = Path.cwd() / ".testweavex"
+    db_dir.mkdir(exist_ok=True)
+    return f"sqlite:///{db_dir / 'results.db'}"
+
+
 def create_app(config: TestWeaveXConfig | None = None) -> FastAPI:
     if config is None:
         config = load_config()
 
-    db_dir = Path.cwd() / ".testweavex"
-    db_dir.mkdir(exist_ok=True)
-    repo = SQLiteRepository(db_url=f"sqlite:///{db_dir / 'results.db'}")
+    repo = SQLiteRepository(db_url=_resolve_db_url())
     bus = EventBus()
 
     app = FastAPI(title="TestWeaveX", version="0.1.0")

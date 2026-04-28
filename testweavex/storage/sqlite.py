@@ -328,16 +328,18 @@ class SQLiteRepository(StorageRepository):
     # ── ScoringSignals ────────────────────────────────────────────────────
 
     def get_scoring_signals(self, tc_id: str) -> ScoringSignals:
+        from datetime import timedelta
         tc = self.get_test_case(tc_id)
+        cutoff_90d = _now() - timedelta(days=90)
         try:
             with self._session() as s:
                 executions_90d_sql = text("""
                     SELECT COUNT(*) FROM test_results tr
                     JOIN test_runs run ON tr.run_id = run.id
                     WHERE tr.test_case_id = :tc_id
-                      AND run.started_at >= datetime('now', '-90 days')
+                      AND run.started_at >= :cutoff
                 """)
-                executions_90d = s.execute(executions_90d_sql, {"tc_id": tc_id}).scalar() or 0
+                executions_90d = s.execute(executions_90d_sql, {"tc_id": tc_id, "cutoff": cutoff_90d}).scalar() or 0
 
                 last_run_sql = text("""
                     SELECT run.started_at FROM test_results tr
