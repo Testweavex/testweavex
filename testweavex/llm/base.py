@@ -43,6 +43,33 @@ def _deduplicate(scenarios: list[Scenario]) -> list[Scenario]:
     return result
 
 
+def _build_gap_prompt(test_case: TestCase) -> str:
+    return (
+        f"Manual test case to automate:\n"
+        f"Title: {test_case.title}\n"
+        f"Type: {test_case.test_type.value}\n"
+        f"Gherkin:\n{test_case.gherkin}\n\n"
+        "Generate exactly 1 Gherkin scenario that automates this test case.\n"
+        'Return JSON: {"scenarios": [{"title": "...", "gherkin": "...", '
+        '"confidence": 0.9, "rationale": "Automates the manual test case.", '
+        '"suggested_tags": []}]}'
+    )
+
+
+def _build_step_prompt(scenarios: list[Scenario], existing_steps: list[str]) -> str:
+    gherkin_text = "\n\n".join(s.gherkin for s in scenarios)
+    existing_text = (
+        "\n".join(f"- {s}" for s in existing_steps) if existing_steps else "None"
+    )
+    return (
+        f"Feature scenarios:\n{gherkin_text}\n\n"
+        f"Already implemented steps (do NOT re-generate these):\n{existing_text}\n\n"
+        "Generate step definitions ONLY for steps not listed above.\n"
+        'Return JSON: {"new_steps": [{"step_text": "...", "implementation": "...", '
+        '"requires_new_module": false, "module_spec": null}]}'
+    )
+
+
 def get_llm_adapter(config: TestWeaveXConfig) -> LLMAdapter:
     provider = config.llm.provider
     if provider == "openai":
@@ -51,6 +78,12 @@ def get_llm_adapter(config: TestWeaveXConfig) -> LLMAdapter:
     if provider == "anthropic":
         from testweavex.llm.anthropic import AnthropicAdapter
         return AnthropicAdapter(config.llm)
+    if provider == "ollama":
+        from testweavex.llm.ollama import OllamaAdapter
+        return OllamaAdapter(config.llm)
+    if provider == "azure":
+        from testweavex.llm.azure import AzureOpenAIAdapter
+        return AzureOpenAIAdapter(config.llm)
     raise ConfigError(
-        f"Unsupported LLM provider: '{provider}'. Choose: openai, anthropic"
+        f"Unsupported LLM provider: '{provider}'. Choose: openai, anthropic, ollama, azure"
     )

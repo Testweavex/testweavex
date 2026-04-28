@@ -1,3 +1,4 @@
+# testweavex/llm/ollama.py
 from __future__ import annotations
 
 import json
@@ -19,13 +20,20 @@ from testweavex.core.models import (
 from testweavex.llm.base import LLMAdapter, _build_gap_prompt, _build_step_prompt, _deduplicate
 from testweavex.skills.loader import SkillLoader
 
+_SYSTEM_PROMPT = (
+    "You are a senior QA engineer. Respond ONLY with valid JSON. "
+    "No markdown, no explanation, no code fences — just the JSON object."
+)
 
-class OpenAIAdapter(LLMAdapter):
+
+class OllamaAdapter(LLMAdapter):
 
     def __init__(self, config: LLMConfig) -> None:
         self._config = config
+        base_url = config.base_url or "http://localhost:11434/v1"
         self._client = openai.OpenAI(
-            api_key=config.api_key,
+            api_key="ollama",
+            base_url=base_url,
             timeout=config.timeout_seconds,
         )
         self._loader = SkillLoader()
@@ -67,8 +75,10 @@ class OpenAIAdapter(LLMAdapter):
                 resp = self._client.chat.completions.create(
                     model=self._config.model,
                     temperature=self._config.temperature,
-                    response_format={"type": "json_object"},
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": _SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
                 )
                 raw = resp.choices[0].message.content
                 data = json.loads(raw)
@@ -79,7 +89,7 @@ class OpenAIAdapter(LLMAdapter):
             except (json.JSONDecodeError, ValidationError, KeyError, TypeError) as exc:
                 last_exc = exc
         raise LLMOutputError(
-            f"OpenAI returned invalid output after {self._config.max_retries} attempts"
+            f"Ollama returned invalid output after {self._config.max_retries} attempts"
         ) from last_exc
 
     def generate_step_definitions(
@@ -92,8 +102,10 @@ class OpenAIAdapter(LLMAdapter):
                 resp = self._client.chat.completions.create(
                     model=self._config.model,
                     temperature=self._config.temperature,
-                    response_format={"type": "json_object"},
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": _SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
                 )
                 raw = resp.choices[0].message.content
                 data = json.loads(raw)
@@ -108,7 +120,7 @@ class OpenAIAdapter(LLMAdapter):
             except (json.JSONDecodeError, ValidationError, KeyError, TypeError) as exc:
                 last_exc = exc
         raise LLMOutputError(
-            f"OpenAI returned invalid step definitions after {self._config.max_retries} attempts"
+            f"Ollama returned invalid step definitions after {self._config.max_retries} attempts"
         ) from last_exc
 
     def suggest_gap_automation(self, manual_test: TestCase) -> GenerationResponse:
@@ -128,7 +140,10 @@ class OpenAIAdapter(LLMAdapter):
         try:
             self._client.chat.completions.create(
                 model=self._config.model,
-                messages=[{"role": "user", "content": "ping"}],
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": "ping"},
+                ],
                 max_tokens=1,
             )
             return True

@@ -98,8 +98,8 @@ testweavex/
 ## Key Commands
 
 ```bash
-# Install
-pip install testweavex
+# Install (not yet on PyPI — install from GitHub)
+pip install git+https://github.com/testweavex/testweavex.git
 
 # Run tests (all pytest flags work)
 tw                                    # Run all tests

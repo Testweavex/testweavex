@@ -1,3 +1,4 @@
+# testweavex/llm/azure.py
 from __future__ import annotations
 
 import json
@@ -7,7 +8,7 @@ import openai
 from pydantic import ValidationError
 
 from testweavex.core.config import LLMConfig
-from testweavex.core.exceptions import LLMOutputError
+from testweavex.core.exceptions import ConfigError, LLMOutputError
 from testweavex.core.models import (
     GenerationRequest,
     GenerationResponse,
@@ -19,13 +20,27 @@ from testweavex.core.models import (
 from testweavex.llm.base import LLMAdapter, _build_gap_prompt, _build_step_prompt, _deduplicate
 from testweavex.skills.loader import SkillLoader
 
+_SYSTEM_PROMPT = (
+    "You are a senior QA engineer. Respond ONLY with valid JSON. "
+    "No markdown, no explanation, no code fences — just the JSON object."
+)
 
-class OpenAIAdapter(LLMAdapter):
+
+class AzureOpenAIAdapter(LLMAdapter):
 
     def __init__(self, config: LLMConfig) -> None:
+        if not config.azure_endpoint:
+            raise ConfigError("LLMConfig.azure_endpoint is required for provider 'azure'")
+        if not config.api_version:
+            raise ConfigError("LLMConfig.api_version is required for provider 'azure'")
+        if not config.deployment_name:
+            raise ConfigError("LLMConfig.deployment_name is required for provider 'azure'")
         self._config = config
-        self._client = openai.OpenAI(
+        self._deployment = config.deployment_name
+        self._client = openai.AzureOpenAI(
             api_key=config.api_key,
+            azure_endpoint=config.azure_endpoint,
+            api_version=config.api_version,
             timeout=config.timeout_seconds,
         )
         self._loader = SkillLoader()
@@ -53,7 +68,7 @@ class OpenAIAdapter(LLMAdapter):
         return GenerationResponse(
             scenarios=deduped,
             skill_used=", ".join(request.skill_names),
-            llm_model=self._config.model,
+            llm_model=self._deployment,
             tokens_used=total_tokens,
             generation_time_ms=elapsed,
         )
@@ -65,10 +80,13 @@ class OpenAIAdapter(LLMAdapter):
         for _ in range(self._config.max_retries):
             try:
                 resp = self._client.chat.completions.create(
-                    model=self._config.model,
+                    model=self._deployment,
                     temperature=self._config.temperature,
                     response_format={"type": "json_object"},
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": _SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
                 )
                 raw = resp.choices[0].message.content
                 data = json.loads(raw)
@@ -79,7 +97,7 @@ class OpenAIAdapter(LLMAdapter):
             except (json.JSONDecodeError, ValidationError, KeyError, TypeError) as exc:
                 last_exc = exc
         raise LLMOutputError(
-            f"OpenAI returned invalid output after {self._config.max_retries} attempts"
+            f"Azure OpenAI returned invalid output after {self._config.max_retries} attempts"
         ) from last_exc
 
     def generate_step_definitions(
@@ -90,10 +108,13 @@ class OpenAIAdapter(LLMAdapter):
         for _ in range(self._config.max_retries):
             try:
                 resp = self._client.chat.completions.create(
-                    model=self._config.model,
+                    model=self._deployment,
                     temperature=self._config.temperature,
                     response_format={"type": "json_object"},
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": _SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
                 )
                 raw = resp.choices[0].message.content
                 data = json.loads(raw)
@@ -102,13 +123,13 @@ class OpenAIAdapter(LLMAdapter):
                 return StepDefinitionResponse(
                     new_steps=steps,
                     reused_count=0,
-                    llm_model=self._config.model,
+                    llm_model=self._deployment,
                     tokens_used=tokens,
                 )
             except (json.JSONDecodeError, ValidationError, KeyError, TypeError) as exc:
                 last_exc = exc
         raise LLMOutputError(
-            f"OpenAI returned invalid step definitions after {self._config.max_retries} attempts"
+            f"Azure OpenAI returned invalid step definitions after {self._config.max_retries} attempts"
         ) from last_exc
 
     def suggest_gap_automation(self, manual_test: TestCase) -> GenerationResponse:
@@ -119,7 +140,7 @@ class OpenAIAdapter(LLMAdapter):
         return GenerationResponse(
             scenarios=scenarios,
             skill_used="gap_automation",
-            llm_model=self._config.model,
+            llm_model=self._deployment,
             tokens_used=tokens,
             generation_time_ms=elapsed,
         )
@@ -127,8 +148,11 @@ class OpenAIAdapter(LLMAdapter):
     def health_check(self) -> bool:
         try:
             self._client.chat.completions.create(
-                model=self._config.model,
-                messages=[{"role": "user", "content": "ping"}],
+                model=self._deployment,
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": "ping"},
+                ],
                 max_tokens=1,
             )
             return True

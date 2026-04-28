@@ -32,6 +32,7 @@ def create_app(config: TestWeaveXConfig | None = None) -> FastAPI:
     from testweavex.web.api.gaps import router as gaps_router
     from testweavex.web.api.settings import router as settings_router
     from testweavex.web.api.events import router as events_router
+    from testweavex.web.api.generate import router as generate_router
 
     app.include_router(dashboard_router, prefix="/api")
     app.include_router(runs_router, prefix="/api")
@@ -39,6 +40,7 @@ def create_app(config: TestWeaveXConfig | None = None) -> FastAPI:
     app.include_router(gaps_router, prefix="/api")
     app.include_router(settings_router, prefix="/api")
     app.include_router(events_router, prefix="/api")
+    app.include_router(generate_router, prefix="/api")
 
     if _STATIC_DIR.exists():
         app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
