@@ -112,7 +112,16 @@ class OpenAIAdapter(LLMAdapter):
         ) from last_exc
 
     def suggest_gap_automation(self, manual_test: TestCase) -> GenerationResponse:
-        raise NotImplementedError
+        from testweavex.llm.base import _build_gap_prompt
+        prompt = _build_gap_prompt(manual_test)
+        scenarios, tokens = self._call_with_retry(prompt, "gap_automation")
+        return GenerationResponse(
+            scenarios=scenarios,
+            skill_used="gap_automation",
+            llm_model=self._config.model,
+            tokens_used=tokens,
+            generation_time_ms=0,
+        )
 
     def health_check(self) -> bool:
         try:

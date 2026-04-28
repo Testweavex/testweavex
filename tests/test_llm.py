@@ -645,3 +645,58 @@ class TestAzureOpenAIAdapter:
 
         adapter = AzureOpenAIAdapter(_azure_config())
         assert adapter.health_check() is False
+
+
+def _make_test_case() -> "TestCase":
+    from testweavex.core.models import TestCase, TestType, generate_stable_id
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    return TestCase(
+        id="tc-gap",
+        title="Login with valid credentials",
+        feature_id=generate_stable_id("features/login.feature"),
+        gherkin="Scenario: Login\n  Given I am on login page\n  When I enter valid creds\n  Then I am logged in",
+        test_type=TestType.smoke,
+        skill="functional/smoke",
+        is_automated=False,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+@patch("testweavex.llm.openai.SkillLoader")
+@patch("testweavex.llm.openai.openai.OpenAI")
+def test_openai_suggest_gap_automation_returns_generation_response(
+    mock_openai_class, mock_loader_class
+):
+    from testweavex.llm.openai import OpenAIAdapter
+
+    mock_client = MagicMock()
+    mock_openai_class.return_value = mock_client
+    mock_client.chat.completions.create.return_value = _openai_response([SCENARIO_DATA])
+    mock_loader_class.return_value = MagicMock()
+
+    adapter = OpenAIAdapter(_config("openai").llm)
+    response = adapter.suggest_gap_automation(_make_test_case())
+
+    assert len(response.scenarios) == 1
+    assert response.skill_used == "gap_automation"
+
+
+@patch("testweavex.llm.anthropic.SkillLoader")
+@patch("testweavex.llm.anthropic.anthropic.Anthropic")
+def test_anthropic_suggest_gap_automation_returns_generation_response(
+    mock_anthropic_class, mock_loader_class
+):
+    from testweavex.llm.anthropic import AnthropicAdapter
+
+    mock_client = MagicMock()
+    mock_anthropic_class.return_value = mock_client
+    mock_client.messages.create.return_value = _anthropic_response([SCENARIO_DATA])
+    mock_loader_class.return_value = MagicMock()
+
+    adapter = AnthropicAdapter(_config("anthropic").llm)
+    response = adapter.suggest_gap_automation(_make_test_case())
+
+    assert len(response.scenarios) == 1
+    assert response.skill_used == "gap_automation"
