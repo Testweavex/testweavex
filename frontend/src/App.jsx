@@ -17,7 +17,9 @@ export default function App() {
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar view={view} setView={setView} />
       <div className="main">
-        <div className="topbar" />
+        <div className="topbar">
+          <span className="page-title">{TITLES[view]}</span>
+        </div>
         {view === 'dashboard' && <Dashboard />}
         {view === 'test-cases' && <TestCases />}
         {view === 'gaps' && <GapReport />}

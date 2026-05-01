@@ -20,9 +20,9 @@ describe('App navigation', () => {
 
   it('renders sidebar with 3 nav items', () => {
     render(<App />)
-    expect(screen.getByText('Dashboard')).toBeInTheDocument()
-    expect(screen.getByText('Test Cases')).toBeInTheDocument()
-    expect(screen.getByText('Gap Report')).toBeInTheDocument()
+    expect(screen.getAllByText('Dashboard')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('Test Cases')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('Gap Report')[0]).toBeInTheDocument()
   })
 
   it('Dashboard is active by default', () => {
