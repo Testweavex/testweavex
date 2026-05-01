@@ -20,27 +20,32 @@ describe('App navigation', () => {
 
   it('renders sidebar with 3 nav items', () => {
     render(<App />)
-    expect(screen.getAllByText('Dashboard')[0]).toBeInTheDocument()
-    expect(screen.getAllByText('Test Cases')[0]).toBeInTheDocument()
-    expect(screen.getAllByText('Gap Report')[0]).toBeInTheDocument()
+    expect(screen.getByRole('navigation')).toBeInTheDocument()
+    expect(screen.getAllByText('Dashboard').length).toBeGreaterThan(0)
+    expect(screen.getByText('Test Cases')).toBeInTheDocument()
+    expect(screen.getByText('Gap Report')).toBeInTheDocument()
   })
 
-  it('Dashboard is active by default', () => {
+  it('Dashboard view is active by default', () => {
     render(<App />)
-    expect(api.getDashboard).toHaveBeenCalled()
+    expect(screen.getByTestId('dashboard-view')).toBeInTheDocument()
+    expect(screen.queryByTestId('test-cases-view')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('gap-report-view')).not.toBeInTheDocument()
   })
 
   it('navigates to Test Cases on sidebar click', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getAllByText('Test Cases')[0])
-    expect(api.getTestCases).toHaveBeenCalled()
+    await user.click(screen.getByText('Test Cases'))
+    expect(screen.getByTestId('test-cases-view')).toBeInTheDocument()
+    expect(screen.queryByTestId('dashboard-view')).not.toBeInTheDocument()
   })
 
   it('navigates to Gap Report on sidebar click', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getAllByText('Gap Report')[0])
-    expect(api.getGaps).toHaveBeenCalled()
+    await user.click(screen.getByText('Gap Report'))
+    expect(screen.getByTestId('gap-report-view')).toBeInTheDocument()
+    expect(screen.queryByTestId('dashboard-view')).not.toBeInTheDocument()
   })
 })
