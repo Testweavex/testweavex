@@ -10,10 +10,12 @@ export default function GapReport() {
   const [genErrors, setGenErrors] = useState({})
 
   useEffect(() => {
+    let mounted = true
     getGaps(20)
-      .then(setGaps)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
+      .then(gaps => { if (mounted) setGaps(gaps) })
+      .catch(e => { if (mounted) setError(e.message) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
   }, [])
 
   async function handleGenerate(gapId) {

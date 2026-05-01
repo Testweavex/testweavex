@@ -98,4 +98,22 @@ describe('GapReport', () => {
     render(<GapReport />)
     expect(await screen.findByText(/Error: HTTP 500/)).toBeInTheDocument()
   })
+
+  it('can generate on multiple gaps independently', async () => {
+    const user = userEvent.setup()
+    const twoGaps = [
+      { id: 'gap-1', priority_score: 0.85, gap_reason: 'Never automated', test_case_id: 'tc-abc123def456789', status: 'open' },
+      { id: 'gap-2', priority_score: 0.60, gap_reason: 'Rarely run', test_case_id: 'tc-xyz000111222333', status: 'open' },
+    ]
+    api.getGaps.mockResolvedValue(twoGaps)
+    api.generateForGap.mockResolvedValue(mockGenerateResponse)
+    render(<GapReport />)
+    await screen.findByText('Never automated')
+    const buttons = screen.getAllByRole('button', { name: 'Generate' })
+    expect(buttons).toHaveLength(2)
+    await user.click(buttons[0])
+    expect(await screen.findByText('Login success flow')).toBeInTheDocument()
+    expect(api.generateForGap).toHaveBeenCalledWith('gap-1')
+    expect(buttons[1]).not.toBeDisabled()
+  })
 })
