@@ -48,6 +48,12 @@ describe('Dashboard', () => {
     expect(await screen.findByText('None')).toBeInTheDocument()
   })
 
+  it('shows "0.0%" when coverage_percentage is null', async () => {
+    api.getDashboard.mockResolvedValue({ ...mockData, coverage_percentage: null })
+    render(<Dashboard />)
+    expect(await screen.findByText('0.0%')).toBeInTheDocument()
+  })
+
   it('shows error message on API failure', async () => {
     api.getDashboard.mockRejectedValue(new Error('HTTP 500'))
     render(<Dashboard />)

@@ -70,7 +70,7 @@ Fetches `GET /api/dashboard` on mount. Displays:
   - **Automated %** ← `coverage_percentage` (formatted as `75.0%`)
   - **Open Gaps** ← `open_gaps`
   - **Last Run** ← `last_run_id` truncated to 8 chars, or "None" if null
-- Coverage sparkline using existing `.sparkline` CSS
+- Coverage sparkline using existing `.sparkline` CSS — **DEFERRED**: `GET /api/dashboard` does not return trend data; sparkline requires a separate `/api/dashboard/trend` endpoint. Tracked for post-MVP.
 
 Loading state: skeleton placeholders. Error state: inline error message.
 

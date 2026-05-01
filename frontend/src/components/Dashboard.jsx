@@ -27,7 +27,7 @@ export default function Dashboard() {
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Automated %</div>
-          <div className="kpi-value">{data.coverage_percentage.toFixed(1)}%</div>
+          <div className="kpi-value">{(data.coverage_percentage ?? 0).toFixed(1)}%</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Open Gaps</div>

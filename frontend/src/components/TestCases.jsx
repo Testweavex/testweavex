@@ -4,6 +4,7 @@ import { getTestCases } from '../api.js'
 const TEST_TYPES = [
   'smoke', 'e2e', 'integration', 'sanity',
   'happy_path', 'data_driven', 'edge_case', 'accessibility',
+  'system', 'cross_browser',
 ]
 
 const TYPE_BADGE = {
