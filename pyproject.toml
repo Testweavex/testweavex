@@ -9,6 +9,19 @@ description = "Unified test management and execution platform with LLM-powered t
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+    "Framework :: Pytest",
+]
+keywords = ["pytest", "testing", "test-management", "llm", "gherkin", "bdd", "gap-analysis", "tcm"]
 
 dependencies = [
     "pydantic>=2.0",
@@ -24,6 +37,11 @@ dependencies = [
     "uvicorn>=0.27",
     "rich>=13.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Testweavex/testweavex"
+Source = "https://github.com/Testweavex/testweavex"
+"Bug Tracker" = "https://github.com/Testweavex/testweavex/issues"
 
 [project.optional-dependencies]
 openai    = ["openai>=1.0"]
