@@ -58,7 +58,7 @@ def test_tw_generate_stub(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["generate", "--feature", "login", "--skill", "functional/smoke"])
     assert result.exit_code == 1
-    assert "Phase 5" in result.output
+    assert "not yet wired" in result.output
 
 
 def test_tw_serve_is_registered(tmp_path, monkeypatch):
