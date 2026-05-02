@@ -36,7 +36,7 @@ pytest tests/ -v
 ```bash
 cd frontend
 npm install
-npm test           # Vitest unit tests (35 tests)
+npm test           # Vitest unit tests
 npm run dev        # Dev server on :5173, proxies /api → FastAPI on :8080
 npm run build      # Writes production bundle to testweavex/web/static/
 ```
@@ -71,7 +71,7 @@ test: add edge case for gap scoring with zero executions
 
 1. Fork the repo and create your branch from `main`
 2. Write tests for any new behaviour (`pytest tests/ -v` must pass)
-3. Fill in the PR template — especially the Design Rules checklist
+3. Fill in the PR template (GitHub loads it automatically from `.github/pull_request_template.md`) — especially the Design Rules checklist
 4. Open a PR against `main`
 
 ### PR Design Rules Checklist
@@ -117,7 +117,7 @@ Run `pytest tests/test_skills.py -v` to verify your skill loads and validates co
 ## Adding an LLM Adapter
 
 1. Create `testweavex/llm/yourprovider.py` implementing `LLMAdapter` (see `testweavex/llm/base.py`)
-2. Register it in `testweavex/llm/__init__.py` factory
+2. Register it in the `get_llm_adapter` factory in `testweavex/llm/base.py`
 3. Add an optional dependency to `pyproject.toml` under `[project.optional-dependencies]`
 4. Write tests in `tests/test_llm.py`
 
