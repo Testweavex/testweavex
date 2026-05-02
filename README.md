@@ -600,7 +600,8 @@ npm run dev        # http://localhost:5173 (proxies /api → FastAPI on :8080)
 Contributions welcome. The lowest-barrier entry point is a new **skill YAML file**:
 
 ```yaml
-# testweavex/skills/custom/your-skill.yaml
+# testweavex/skills/custom/your-skill.yaml  ← project-local (not contributed upstream)
+# To contribute a new built-in skill, use: testweavex/skills/builtin/functional/your-skill.yaml
 name: custom/your-skill
 display_name: Your Skill Name
 description: What this skill generates

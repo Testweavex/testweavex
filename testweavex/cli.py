@@ -192,8 +192,8 @@ def generate(
     feature: str = typer.Option(..., "--feature"),
     skill: str = typer.Option("functional/smoke", "--skill"),
 ) -> None:
-    """Generate tests with LLM. (Requires Phase 5)"""
-    console.print("[red]tw generate requires Phase 5 — not yet available.[/red]")
+    """Generate tests with LLM for a given feature description."""
+    console.print("[red]tw generate is not yet wired to the generation engine in this release.[/red]")
     raise typer.Exit(code=1)
 
 
