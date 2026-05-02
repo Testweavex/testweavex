@@ -369,7 +369,6 @@ gap_analysis:
 | `tw status` | Show coverage map and summary |
 | `tw history` | Show execution history |
 | `tw serve` | Start local Web UI (port 8080) |
-| `tw migrate` | Migrate from external TCM |
 | `tw sync` | Push results to external TCM |
 
 ---
