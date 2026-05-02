@@ -365,7 +365,7 @@ gap_analysis:
 | `tw init` | Initialise TestWeaveX in a project |
 | `tw generate` | Generate tests from a feature description |
 | `tw gaps` | Run gap analysis, show prioritised report |
-| `tw import` | Import test cases from TestRail, Xray, or CSV |
+| `tw migrate` | Import test cases from an external TCM (TestRail, Xray) |
 | `tw status` | Show coverage map and summary |
 | `tw history` | Show execution history |
 | `tw serve` | Start local Web UI (port 8080) |
@@ -527,13 +527,13 @@ testweavex/
 | Phase | Weeks | Deliverable |
 |-------|-------|-------------|
 | 1 — Foundation | 1–2 | `core/models.py` + `storage/sqlite.py` ✅ |
-| 2 — LLM | 3–4 | `llm/base.py` + `llm/openai.py` + `skills/loader.py` |
-| 3 — Generation | 5–6 | `generation/engine.py` + `generation/gherkin.py` |
-| 4 — Execution | 7–8 | `execution/plugin.py` + `cli.py` |
-| 5 — Gap Analysis | 9–10 | `gap/detector.py` + `gap/scorer.py` |
-| 6 — Web UI | 11–14 | `web/app.py` + React frontend |
-| 7 — TCM Connectors | 15–16 | `tcm/testrail.py` + `tcm/xray.py` |
-| 8 — Polish & OSS | 17–18 | Docs, README, contribution guide |
+| 2 — LLM | 3–4 | `llm/base.py` + `llm/openai.py` + `skills/loader.py` ✅ |
+| 3 — Generation | 5–6 | `generation/engine.py` + `generation/gherkin.py` ✅ |
+| 4 — Execution | 7–8 | `execution/plugin.py` + `cli.py` ✅ |
+| 5 — Gap Analysis | 9–10 | `gap/detector.py` + `gap/scorer.py` ✅ |
+| 6 — Web UI | 11–14 | `web/app.py` + React frontend ✅ |
+| 7 — TCM Connectors | 15–16 | `tcm/testrail.py` + `tcm/xray.py` ✅ |
+| 8 — Polish & OSS | 17–18 | Docs, README, contribution guide ✅ |
 
 ---
 
@@ -544,6 +544,12 @@ git clone https://github.com/Testweavex/testweavex
 cd testweavex
 pip install -e ".[dev]"
 pytest tests/ -v
+
+# Frontend (optional — only needed for UI development)
+cd frontend
+npm install
+npm test           # Vitest unit tests
+npm run dev        # http://localhost:5173 (proxies /api → FastAPI on :8080)
 ```
 
 ### Tech Stack
@@ -614,7 +620,7 @@ priority: 3
 
 Other contribution areas: LLM adapter implementations, TCM connectors, bug fixes, documentation.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) (coming in Phase 8).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, branch naming, PR checklist, and extension guides.
 
 ---
 
