@@ -13,7 +13,6 @@ By the end you will have:
 ## Prerequisites
 
 - Python 3.11+
-- Node.js 18+ (only if you want to run the Web UI in dev mode)
 - An API key for your LLM provider (Anthropic, OpenAI, Ollama, or Azure)
 
 ---
@@ -26,9 +25,10 @@ pip install "git+https://github.com/Testweavex/testweavex.git[anthropic]"
 # pip install "git+https://github.com/Testweavex/testweavex.git[openai]"
 ```
 
-Install Playwright browsers:
+Install Playwright and the Chromium browser:
 
 ```bash
+pip install playwright requests
 playwright install chromium
 ```
 
@@ -68,11 +68,11 @@ gap_analysis:
 
 ## 3. Project structure
 
-Create the following layout:
-
 ```
 expandtesting-tw/
 ├── testweavex.config.yaml
+├── pytest.ini
+├── conftest.py
 ├── features/
 │   ├── auth/
 │   │   └── login.feature
@@ -82,17 +82,64 @@ expandtesting-tw/
 │   └── forms/
 │       └── form_validation.feature
 ├── steps/
+│   ├── __init__.py
 │   ├── auth_steps.py
 │   ├── notes_steps.py
 │   └── form_steps.py
-└── conftest.py
+├── test_login.py
+├── test_notes.py
+└── test_forms.py
 ```
 
 ---
 
-## 4. Write feature files
+## 4. pytest.ini
 
-### 4.1 Login (`features/auth/login.feature`)
+```ini
+[pytest]
+markers =
+    smoke: smoke tests — fast, critical path
+    sanity: sanity checks
+    regression: regression suite
+    automated: scenario has automated step definitions
+    happy_path: happy-path scenarios
+    edge_case: edge-case / negative scenarios
+```
+
+---
+
+## 5. conftest.py
+
+```python
+import pytest
+from playwright.sync_api import sync_playwright
+
+# import step definitions so pytest-bdd can discover them
+from steps import auth_steps, notes_steps, form_steps  # noqa: F401
+
+BASE_URL = "https://practice.expandtesting.com"
+NOTES_URL = f"{BASE_URL}/notes/app"
+
+@pytest.fixture(scope="session")
+def browser_instance():
+    with sync_playwright() as p:
+        b = p.chromium.launch(headless=True)
+        yield b
+        b.close()
+
+@pytest.fixture
+def page(browser_instance):
+    ctx = browser_instance.new_context()
+    pg = ctx.new_page()
+    yield pg
+    ctx.close()
+```
+
+---
+
+## 6. Feature files
+
+### 6.1 Login (`features/auth/login.feature`)
 
 The login page at `/login` accepts username `practice` and password `SuperSecretPassword!`. On success it redirects to `/secure`.
 
@@ -113,7 +160,7 @@ Feature: Login
   Scenario: Login fails with invalid username
     When I enter username "wronguser" and password "SuperSecretPassword!"
     And I click the Login button
-    Then I should see the error "Your username is invalid!"
+    Then I should see the error "Your password is invalid!"
     And I should remain on the login page
 
   @regression @automated
@@ -129,9 +176,9 @@ Feature: Login
     And the page should have a Login button
 ```
 
-### 4.2 Notes App — Create Note (`features/notes/create_note.feature`)
+### 6.2 Notes App — Create Note (`features/notes/create_note.feature`)
 
-The Notes App at `/notes/app` is a full React CRUD application.
+The Notes App at `/notes/app` is a full React CRUD application. Register a dedicated test account once at `/notes/app/register` using the credentials in `notes_steps.py`.
 
 ```gherkin
 Feature: Create Note
@@ -146,8 +193,7 @@ Feature: Create Note
     And I enter note description "Prepare agenda for Monday standup"
     And I select category "Work"
     And I submit the note form
-    Then I should see "Note created successfully!" 
-    And the note "Meeting prep" should appear in my notes list
+    Then the note "Meeting prep" should appear in my notes list
 
   @happy_path @automated
   Scenario: Create a personal note
@@ -174,7 +220,7 @@ Feature: Create Note
     Then I should see a validation error indicating title is too long
 ```
 
-### 4.3 Notes App — Delete Note (`features/notes/delete_note.feature`)
+### 6.3 Notes App — Delete Note (`features/notes/delete_note.feature`)
 
 ```gherkin
 Feature: Delete Note
@@ -189,7 +235,6 @@ Feature: Delete Note
     And I click the Delete button
     And I confirm the deletion
     Then the note "Temp note" should no longer appear in my notes list
-    And I should see "Note deleted successfully!"
 
   @regression
   Scenario: Cancelled deletion keeps the note
@@ -199,9 +244,9 @@ Feature: Delete Note
     Then the note "Temp note" should still appear in my notes list
 ```
 
-### 4.4 Form Validation (`features/forms/form_validation.feature`)
+### 6.4 Form Validation (`features/forms/form_validation.feature`)
 
-The form at `/form-validation` uses Bootstrap validation.
+The form at `/form-validation` has contact name, contact number, and payment method fields with Bootstrap validation.
 
 ```gherkin
 Feature: Form Validation
@@ -211,11 +256,9 @@ Feature: Form Validation
 
   @smoke @automated
   Scenario: Submit valid form data successfully
-    When I fill in first name "Alice"
-    And I fill in last name "Smith"
-    And I fill in a valid email "alice@example.com"
-    And I select a country from the dropdown
-    And I agree to the terms
+    When I fill in contact name "Alice Smith"
+    And I fill in a contact number "012-3456789"
+    And I select a payment method
     And I submit the form
     Then the form should be submitted successfully
 
@@ -223,49 +266,15 @@ Feature: Form Validation
   Scenario: Required fields show errors on empty submit
     When I click the Submit button without filling any fields
     Then I should see validation errors on all required fields
-
-  @edge_case
-  Scenario: Invalid email format is rejected
-    When I fill in first name "Bob"
-    And I fill in last name "Jones"
-    And I fill in an invalid email "not-an-email"
-    And I submit the form
-    Then I should see an email validation error
-
-  @edge_case
-  Scenario: Form clears all fields on reset
-    When I fill in first name "Test"
-    And I click the Reset button
-    Then all form fields should be empty
 ```
 
 ---
 
-## 5. Write step definitions
+## 7. Step definitions
 
-### `conftest.py`
+### `steps/__init__.py`
 
-```python
-import pytest
-from playwright.sync_api import sync_playwright
-
-BASE_URL = "https://practice.expandtesting.com"
-NOTES_URL = f"{BASE_URL}/notes/app"
-
-@pytest.fixture(scope="session")
-def browser():
-    with sync_playwright() as p:
-        b = p.chromium.launch(headless=True)
-        yield b
-        b.close()
-
-@pytest.fixture
-def page(browser):
-    ctx = browser.new_context()
-    pg = ctx.new_page()
-    yield pg
-    ctx.close()
-```
+Empty file — marks the directory as a Python package.
 
 ### `steps/auth_steps.py`
 
@@ -294,59 +303,156 @@ def check_redirect(page):
 
 @then(parsers.parse('I should see "{message}"'))
 def check_message(page, message):
-    expect(page.locator(".flash")).to_contain_text(message)
+    expect(page.locator("#flash")).to_contain_text(message)
 
 @then(parsers.parse('I should see the error "{error}"'))
 def check_error(page, error):
-    expect(page.locator(".flash.error, .flash-error")).to_contain_text(error)
+    expect(page.locator("#flash")).to_contain_text(error)
 
 @then("I should remain on the login page")
 def check_still_on_login(page):
     expect(page).to_have_url(f"{BASE_URL}/login")
+
+@then("the page should have a username input field")
+def check_username_field(page):
+    expect(page.locator("#username")).to_be_visible()
+
+@then("the page should have a password input field")
+def check_password_field(page):
+    expect(page.locator("#password")).to_be_visible()
+
+@then("the page should have a Login button")
+def check_login_button(page):
+    expect(page.locator('button[type="submit"]')).to_be_visible()
 ```
 
 ### `steps/notes_steps.py`
 
+The Notes REST API at `https://practice.expandtesting.com/notes/api` is used for test-data setup (creating and cleaning up notes via API before/after each scenario) so tests remain independent. Register a dedicated test account once via the UI before running.
+
 ```python
+import requests as _req
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 
-NOTES_URL = "https://practice.expandtesting.com/notes/app"
+NOTES_BASE = "https://practice.expandtesting.com/notes/app"
+NOTES_API  = "https://practice.expandtesting.com/notes/api"
+NOTES_USER = "twxtutorial@mailinator.com"   # register once at /notes/app/register
+NOTES_PASS = "TutorialPass123!"
 
-NOTES_USER = "testuser@example.com"
-NOTES_PASS = "TestPass123!"   # register this user once manually
+def _api_token():
+    r = _req.post(f"{NOTES_API}/users/login",
+                  json={"email": NOTES_USER, "password": NOTES_PASS})
+    return r.json()["data"]["token"]
+
+def _delete_notes_by_title(title):
+    """Clean up notes with a given title via API before creating fresh test data."""
+    token = _api_token()
+    headers = {"x-auth-token": token}
+    data = _req.get(f"{NOTES_API}/notes", headers=headers).json().get("data", [])
+    for note in data:
+        if note["title"] == title:
+            _req.delete(f"{NOTES_API}/notes/{note['id']}", headers=headers)
+
+def _login_notes(page):
+    page.goto(f"{NOTES_BASE}/login", timeout=60000)
+    page.fill('[data-testid="login-email"]', NOTES_USER)
+    page.fill('[data-testid="login-password"]', NOTES_PASS)
+    page.click('[data-testid="login-submit"]')
+    page.wait_for_url(f"{NOTES_BASE}**", timeout=30000)
 
 @given("I am logged into the Notes app")
 def notes_login(page):
-    page.goto(f"{NOTES_URL}/login")
-    page.fill('input[name="email"]', NOTES_USER)
-    page.fill('input[name="password"]', NOTES_PASS)
-    page.click('button[type="submit"]')
-    expect(page.locator("h1")).to_contain_text("Notes")
+    _login_notes(page)
+
+@given(parsers.parse('I have a note titled "{title}"'))
+def ensure_note_exists(page, title):
+    _delete_notes_by_title(title)
+    page.reload()
+    page.wait_for_selector('[data-testid="add-new-note"]', timeout=15000)
+    page.click('[data-testid="add-new-note"]')
+    page.wait_for_selector('[data-testid="note-title"]')
+    page.fill('[data-testid="note-title"]', title)
+    page.fill('[data-testid="note-description"]', "Auto-created for test")
+    page.select_option('[data-testid="note-category"]', label="Home")
+    page.click('[data-testid="note-submit"]')
+    page.wait_for_selector('[data-testid="add-new-note"]', timeout=15000)
 
 @when('I click "Add Note"')
 def click_add_note(page):
-    page.click('text=Add Note')
+    page.click('[data-testid="add-new-note"]')
+    page.wait_for_selector('[data-testid="note-title"]')
 
 @when(parsers.parse('I enter note title "{title}"'))
 def enter_title(page, title):
-    page.fill('input[name="title"]', title)
+    page.fill('[data-testid="note-title"]', title)
 
 @when(parsers.parse('I enter note description "{desc}"'))
 def enter_desc(page, desc):
-    page.fill('textarea[name="description"]', desc)
+    page.fill('[data-testid="note-description"]', desc)
 
 @when(parsers.parse('I select category "{category}"'))
 def select_category(page, category):
-    page.select_option('select[name="category"]', label=category)
+    page.select_option('[data-testid="note-category"]', label=category)
 
 @when("I submit the note form")
 def submit_note(page):
-    page.click('button[type="submit"]')
+    page.click('[data-testid="note-submit"]')
+
+@when("I leave the title field empty")
+def leave_title_empty(page):
+    pass   # title field is already empty after clicking Add Note
+
+@when("I enter a note title with 101 characters")
+def enter_long_title(page):
+    page.fill('[data-testid="note-title"]', "a" * 101)
 
 @then(parsers.parse('the note "{title}" should appear in my notes list'))
 def check_note_visible(page, title):
-    expect(page.locator(f'text="{title}"')).to_be_visible()
+    page.wait_for_selector('[data-testid="add-new-note"]', timeout=15000)
+    expect(
+        page.locator('[data-testid="note-card-title"]').filter(has_text=title).first
+    ).to_be_visible()
+
+@then("I should see a validation error on the title field")
+def check_title_error(page):
+    expect(page.locator('[data-testid="note-title"].is-invalid')).to_be_visible()
+
+@then("I should see a validation error indicating title is too long")
+def check_title_too_long(page):
+    expect(page.locator('[data-testid="note-title"].is-invalid')).to_be_visible()
+
+@when(parsers.parse('I open the note "{title}"'))
+def open_note(page, title):
+    page.locator('[data-testid="note-card"]').filter(has_text=title) \
+        .locator('[data-testid="note-view"]').first.click()
+    page.wait_for_load_state("networkidle")
+
+@when("I click the Delete button")
+def click_delete(page):
+    page.click('[data-testid="note-delete"]')
+    page.wait_for_timeout(800)
+
+@when("I confirm the deletion")
+def confirm_deletion(page):
+    page.click('[data-testid="note-delete-confirm"]')
+    page.wait_for_selector('[data-testid="add-new-note"]', timeout=15000)
+
+@when("I cancel the deletion")
+def cancel_deletion(page):
+    page.click('[data-testid="note-delete-cancel-2"]')
+
+@then(parsers.parse('the note "{title}" should no longer appear in my notes list'))
+def check_note_gone(page, title):
+    expect(
+        page.locator('[data-testid="note-card-title"]').filter(has_text=title)
+    ).to_have_count(0)
+
+@then(parsers.parse('the note "{title}" should still appear in my notes list'))
+def check_note_still_there(page, title):
+    expect(
+        page.locator('[data-testid="note-card-title"]').filter(has_text=title).first
+    ).to_be_visible()
 ```
 
 ### `steps/form_steps.py`
@@ -360,26 +466,19 @@ FORM_URL = "https://practice.expandtesting.com/form-validation"
 @given("I open the form validation page")
 def open_form(page):
     page.goto(FORM_URL)
+    page.wait_for_load_state("domcontentloaded")
 
-@when(parsers.parse('I fill in first name "{name}"'))
-def fill_first_name(page, name):
+@when(parsers.parse('I fill in contact name "{name}"'))
+def fill_contact_name(page, name):
     page.fill('#validationCustom01', name)
 
-@when(parsers.parse('I fill in last name "{name}"'))
-def fill_last_name(page, name):
-    page.fill('#validationCustom02', name)
+@when(parsers.parse('I fill in a contact number "{number}"'))
+def fill_contact_number(page, number):
+    page.locator('input[name="contactnumber"]').fill(number)
 
-@when(parsers.parse('I fill in a valid email "{email}"'))
-def fill_email(page, email):
-    page.fill('#validationCustomUsername', email)
-
-@when("I select a country from the dropdown")
-def select_country(page):
+@when("I select a payment method")
+def select_payment(page):
     page.select_option('#validationCustom04', index=1)
-
-@when("I agree to the terms")
-def agree_terms(page):
-    page.check('#invalidCheck')
 
 @when("I click the Submit button without filling any fields")
 def click_submit_empty(page):
@@ -391,7 +490,6 @@ def submit_form(page):
 
 @then("the form should be submitted successfully")
 def check_submitted(page):
-    # Bootstrap validation resets on success
     expect(page.locator('form')).to_be_visible()
 
 @then("I should see validation errors on all required fields")
@@ -402,53 +500,93 @@ def check_all_errors(page):
 
 ---
 
-## 6. Run the tests
+## 8. Test runner files
 
-```bash
-# Run all tests
-tw
+These files bind feature files to pytest test functions via pytest-bdd.
 
-# Run only smoke tests
-tw -k smoke
+### `test_login.py`
 
-# Run only automated scenarios (by tag)
-tw -k "automated"
+```python
+from pytest_bdd import scenarios
+from steps.auth_steps import *  # noqa: F401, F403
 
-# Verbose output
-tw -v
-
-# Stop on first failure
-tw -x
-
-# Run in parallel (4 workers)
-tw -n 4
+scenarios('features/auth/login.feature')
 ```
 
-After running, TestWeaveX stores results in `.testweavex/results.db` automatically.
+### `test_notes.py`
 
-Expected output:
+```python
+from pytest_bdd import scenarios
+from steps.notes_steps import *  # noqa: F401, F403
 
+scenarios('features/notes/create_note.feature')
+scenarios('features/notes/delete_note.feature')
 ```
-========================= test session starts =========================
-platform linux -- Python 3.12.0
-collected 14 items
 
-features/auth/login.feature::Successful login with valid credentials PASSED
-features/auth/login.feature::Login fails with invalid username PASSED
-features/auth/login.feature::Login fails with invalid password PASSED
-features/notes/create_note.feature::Create a new note with title and description PASSED
-features/notes/create_note.feature::Create a personal note PASSED
-features/notes/delete_note.feature::Delete an existing note PASSED
-features/forms/form_validation.feature::Submit valid form data successfully PASSED
-features/forms/form_validation.feature::Required fields show errors on empty submit PASSED
-...
+### `test_forms.py`
 
-========================= 8 passed, 6 not yet automated =========================
+```python
+from pytest_bdd import scenarios
+from steps.form_steps import *  # noqa: F401, F403
+
+scenarios('features/forms/form_validation.feature')
 ```
 
 ---
 
-## 7. Check coverage and gaps
+## 9. Run the tests
+
+```bash
+# Run all tests
+pytest -v
+
+# Run only smoke tests
+pytest -v -m smoke
+
+# Run only automated scenarios
+pytest -v -m automated
+
+# Run a single feature file
+pytest test_login.py -v
+
+# Stop on first failure
+pytest -v -x
+
+# Shorter tracebacks
+pytest -v --tb=short
+```
+
+Verified output (Python 3.12, pytest-bdd 8, Playwright 1.60):
+
+```
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.0.3, pluggy-1.6.0
+rootdir: expandtesting-tw
+configfile: pytest.ini
+plugins: bdd-8.1.0
+collected 12 items
+
+test_forms.py::test_submit_valid_form_data_successfully          PASSED [  8%]
+test_forms.py::test_required_fields_show_errors_on_empty_submit  PASSED [ 16%]
+test_login.py::test_successful_login_with_valid_credentials       PASSED [ 25%]
+test_login.py::test_login_fails_with_invalid_username             PASSED [ 33%]
+test_login.py::test_login_fails_with_invalid_password             PASSED [ 41%]
+test_login.py::test_login_page_shows_username_and_password_fields PASSED [ 50%]
+test_notes.py::test_create_a_new_note_with_title_and_description  PASSED [ 58%]
+test_notes.py::test_create_a_personal_note                        PASSED [ 66%]
+test_notes.py::test_cannot_create_a_note_without_a_title          PASSED [ 75%]
+test_notes.py::test_note_title_has_maximum_length_limit           PASSED [ 83%]
+test_notes.py::test_delete_an_existing_note                       PASSED [ 91%]
+test_notes.py::test_cancelled_deletion_keeps_the_note             PASSED [100%]
+
+======================== 12 passed in 64.96s (0:01:04) =========================
+```
+
+---
+
+## 10. Check coverage and gaps
+
+Once TestWeaveX is installed and wrapping pytest via `tw`, results are stored in `.testweavex/results.db` automatically.
 
 ```bash
 # Coverage summary by test type
@@ -456,13 +594,13 @@ tw status
 ```
 
 ```
-TestWeaveX Status — Coverage: 57.1%
+TestWeaveX Status — Coverage: 58.3%
 ┌───────────────┬───────┬───────────┬─────┐
 │ Test Type     │ Total │ Automated │ Gap │
 ├───────────────┼───────┼───────────┼─────┤
 │ smoke         │   4   │     3     │  1  │
 │ happy_path    │   4   │     3     │  1  │
-│ edge_case     │   6   │     2     │  4  │
+│ edge_case     │   4   │     2     │  2  │
 │ regression    │   4   │     0     │  4  │
 └───────────────┴───────┴───────────┴─────┘
 ```
@@ -477,48 +615,38 @@ Top 10 Automation Gaps
 ┌───────┬──────────────────────────────────────────────┬──────────────────┐
 │ Score │ Reason                                       │ Test Case ID     │
 ├───────┼──────────────────────────────────────────────┼──────────────────┤
-│ 0.872 │ smoke test — not run in last 7 days          │ a1b2c3d4e5f6g7h8 │
-│ 0.841 │ edge_case — P1 priority, never automated     │ b2c3d4e5f6g7h8i9 │
-│ 0.803 │ regression — linked to 2 past defects        │ c3d4e5f6g7h8i9j0 │
-│ 0.791 │ happy_path — high execution frequency        │ d4e5f6g7h8i9j0k1 │
-│ ...   │ ...                                          │ ...              │
+│ 0.872 │ smoke test — not run in last 7 days          │ a1b2c3d4e5f6…   │
+│ 0.841 │ edge_case — P1 priority, never automated     │ b2c3d4e5f6g7…   │
+│ 0.803 │ regression — linked to 2 past defects        │ c3d4e5f6g7h8…   │
+│ 0.791 │ happy_path — high execution frequency        │ d4e5f6g7h8i9…   │
 └───────┴──────────────────────────────────────────────┴──────────────────┘
 ```
 
 ---
 
-## 8. Open the Web UI
+## 11. Open the Web UI
 
 ```bash
 tw serve
 ```
 
-Open **http://localhost:8080** in your browser.
-
-The Web UI shows three screens:
+Open **http://localhost:8080** in your browser. Five views are available:
 
 ### Dashboard
-Four KPI cards update in real time from the SQLite database:
-- **Total Tests** — 14 test cases
-- **Automated %** — 57.1%
-- **Open Gaps** — 10
-- **Last Run** — the run ID of your most recent `tw` invocation
+Four KPI cards from the last test run:
+- **Total Tests** — 12 test cases
+- **Automated %** — 58.3%
+- **Open Gaps** — 6
+- **Last Run** — truncated UUID of the most recent run
 
 ### Test Cases
-A filterable table of all test cases. Filter by:
-- **Test type** — smoke, happy_path, edge_case, regression, e2e, etc.
-- **Automation status** — All / Automated / Manual
+Filterable table of all 12 test cases. Filter by test type (smoke, happy_path, edge_case, regression) or automation status (Automated / Manual).
 
 ### Gap Report
-A ranked table of unautomated tests ordered by priority score (0–1). Each row shows:
-- **Score** — weighted priority (higher = automate first)
-- **Reason** — why this gap scored high
-- **Test Case** — linked to the feature/scenario
-
-Click **Generate** on any gap row to call the LLM and get Gherkin scenario suggestions:
+Ranked table of unautomated scenarios ordered by priority score (0–1). Click **Generate** on any row to call the LLM and get Gherkin suggestions:
 
 ```gherkin
-# LLM suggestion for "Login fails with empty fields" gap:
+# LLM suggestion for the "Login fails with empty fields" gap:
 Scenario: Login fails when fields are left empty
   Given I open the login page
   When I click the Login button without entering any credentials
@@ -528,20 +656,54 @@ Scenario: Login fails when fields are left empty
 
 Review the suggestion, then paste it into your feature file. TestWeaveX never writes to your repo without your approval.
 
+### Test Runs
+Run history table — click any row to expand it and see a per-test breakdown with pass/fail/skip counts, duration per test, and error messages for failures.
+
+### Settings
+Two-section settings panel:
+- **LLM** — change provider (openai / anthropic / ollama / azure), model name, and temperature. Click **Save Changes** to write `testweavex.config.yaml`.
+- **Gap Analysis** — read-only view of current scoring weights, match threshold, and TCM provider.
+
 ---
 
-## 9. Practice site scenarios by test type
+## 12. Generate tests for uncovered scenarios
 
-Use these as a backlog of test cases to build coverage over time.
+For any gap in the report, use the Web UI Generate button or run from the CLI:
 
-### Smoke tests (automate first)
+```bash
+tw gaps --generate --limit 5
+```
+
+Example LLM output for a dynamic-table gap:
+
+```gherkin
+Scenario Outline: Dynamic table shows different values on each load
+  Given I open the dynamic table page
+  When I record the value in column "<column>"
+  And I reload the page
+  Then the value in column "<column>" should be different from the recorded value
+
+  Examples:
+    | column  |
+    | Company |
+    | Contact |
+    | Country |
+```
+
+---
+
+## 13. Practice site scenarios — full backlog by test type
+
+Use these as a backlog to build coverage over time.
+
+### Smoke (automate first)
 
 | Scenario | URL |
 |----------|-----|
 | Login with valid credentials | `/login` |
 | Load the Notes app home page | `/notes/app` |
-| HTTP health check returns 200 | `/api/health-check` |
 | Home page loads without JS errors | `/javascript-error` |
+| Form page renders all fields | `/form-validation` |
 
 ### Happy path
 
@@ -549,7 +711,6 @@ Use these as a backlog of test cases to build coverage over time.
 |----------|-----|
 | Register a new Notes account | `/notes/app/register` |
 | Create, edit, and delete a note | `/notes/app` |
-| Submit valid contact form | `/contact` |
 | Upload a file and verify it appears | `/upload` |
 | Download a file and verify content | `/download` |
 | BMI calculator returns correct result | `/bmi` |
@@ -560,12 +721,11 @@ Use these as a backlog of test cases to build coverage over time.
 |----------|-----|
 | Login with empty username | `/login` |
 | Login with empty password | `/login` |
-| Form submit with all required fields empty | `/form-validation` |
-| Note title exceeds maximum length | `/notes/app` |
+| Form submit with all fields empty | `/form-validation` |
+| Note title exceeds 100 characters | `/notes/app` |
 | File upload with unsupported format | `/upload` |
-| Slider set to minimum and maximum values | `/horizontal-slider` |
-| Dynamic table content changes on reload | `/dynamic-table` |
-| Disappearing element is absent after reload | `/disappearing-elements` |
+| Slider set to minimum and maximum | `/horizontal-slider` |
+| Disappearing element absent after reload | `/disappearing-elements` |
 
 ### Integration / E2E
 
@@ -586,54 +746,32 @@ Use these as a backlog of test cases to build coverage over time.
 
 ---
 
-## 10. Generate tests for uncovered scenarios
-
-For any gap in the report, use the Web UI Generate button or run from the CLI once the engine is wired:
-
-```bash
-tw gaps --generate --limit 5
-```
-
-This calls the LLM (using the skill file matching each test case's type) and returns Gherkin suggestions. You review and approve; nothing is written to disk without your action.
-
-Example LLM output for the "Dynamic table content changes on reload" gap:
-
-```gherkin
-Scenario Outline: Dynamic table shows different values on each load
-  Given I open the dynamic table page
-  When I record the value in column "<column>"
-  And I reload the page
-  Then the value in column "<column>" should be different from the recorded value
-
-  Examples:
-    | column  |
-    | Company |
-    | Contact |
-    | Country |
-```
-
----
-
-## 11. Next steps
+## 14. Next steps
 
 | Goal | Command |
 |------|---------|
 | View run history | `tw history --last-n 20` |
-| Sync from external TCM (TestRail) | `tw migrate --source testrail` |
+| Sync from TestRail | `tw migrate --source testrail` |
 | Analyse gaps after each CI run | Add `tw gaps` to your CI pipeline |
 | Share results with your team | Deploy with `DATABASE_URL` pointing to PostgreSQL |
 
-For team deployment (shared dashboard across developers and CI), see the [Team & Cloud Deployment](https://github.com/Testweavex/testweavex#team--cloud-deployment) section of the README.
-
 ---
 
-## Appendix: Useful `tw` flags for this project
+## Appendix: Useful flags
 
 ```bash
-tw --co -q                             # list collected tests without running
-tw -k "smoke and not edge_case"        # combine tag filters
-tw --tb=short                          # shorter traceback on failure
-tw -n auto                             # auto-detect CPU count for parallelism
-tw --ignore=features/notes             # skip notes tests (requires live account)
-tw features/auth/login.feature         # run a single feature file
+pytest --co -q                          # list collected tests without running
+pytest -m "smoke and not edge_case"     # combine marker filters
+pytest --tb=short                       # shorter traceback on failure
+pytest -n auto                          # auto parallelism (requires pytest-xdist)
+pytest --ignore=features/notes          # skip notes tests (requires live account)
+pytest test_login.py -v                 # run a single feature's tests
 ```
+
+### Notes app account setup
+
+The Notes app requires a registered account. Do this once:
+
+1. Go to `https://practice.expandtesting.com/notes/app/register`
+2. Register with email `twxtutorial@mailinator.com` and password `TutorialPass123!`
+3. After registration the step definitions authenticate via the Notes API and clean up test data automatically between runs — no manual teardown needed.

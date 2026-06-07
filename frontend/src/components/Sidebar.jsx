@@ -2,6 +2,8 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
   { id: 'test-cases', label: 'Test Cases', icon: '📋' },
   { id: 'gaps', label: 'Gap Report', icon: '🔍' },
+  { id: 'runs', label: 'Test Runs', icon: '▶' },
+  { id: 'settings', label: 'Settings', icon: '⚙' },
 ]
 
 export default function Sidebar({ view, setView }) {

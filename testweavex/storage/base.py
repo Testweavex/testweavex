@@ -67,3 +67,9 @@ class StorageRepository(ABC):
 
     @abstractmethod
     def get_results_for_run(self, run_id: str) -> list[TestResult]: ...
+
+    @abstractmethod
+    def delete_test_case(self, id: str) -> None: ...
+
+    @abstractmethod
+    def get_results_for_test_case(self, tc_id: str, limit: int = 10) -> list[TestResult]: ...

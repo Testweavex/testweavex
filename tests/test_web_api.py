@@ -129,6 +129,142 @@ def test_gap_generate_returns_404_when_gap_not_found(client):
     assert response.status_code == 404
 
 
+def test_test_case_get_single_not_found(client):
+    response = client.get("/api/test-cases/nonexistent-id")
+    assert response.status_code == 404
+
+
+def test_test_case_get_single_returns_detail_with_results(client):
+    from datetime import datetime, timezone
+    from testweavex.core.models import TestCase, TestType, generate_stable_id
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    tc = TestCase(
+        id=generate_stable_id("f", "s"),
+        title="Login test",
+        feature_id=generate_stable_id("f"),
+        gherkin="Scenario: Login\n  Given I am on login page",
+        test_type=TestType.smoke,
+        skill="builtin",
+        created_at=now, updated_at=now,
+    )
+    client.app.state.repo.upsert_test_case(tc)
+    response = client.get(f"/api/test-cases/{tc.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["title"] == "Login test"
+    assert "recent_results" in data
+    assert isinstance(data["recent_results"], list)
+
+
+def test_test_case_create(client):
+    response = client.post("/api/test-cases", json={
+        "title": "New manual test",
+        "test_type": "smoke",
+        "priority": 1,
+        "tags": ["smoke", "manual"],
+        "gherkin": "Scenario: New test\n  Given something",
+    })
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "New manual test"
+    assert data["test_type"] == "smoke"
+    assert data["priority"] == 1
+    assert "smoke" in data["tags"]
+
+
+def test_test_case_create_invalid_type(client):
+    response = client.post("/api/test-cases", json={
+        "title": "Bad test",
+        "test_type": "invalid_type",
+    })
+    assert response.status_code == 422
+
+
+def test_test_case_create_auto_generates_gherkin_when_empty(client):
+    response = client.post("/api/test-cases", json={"title": "Auto gherkin test"})
+    assert response.status_code == 201
+    assert "Scenario:" in response.json()["gherkin"]
+
+
+def test_test_case_patch(client):
+    from datetime import datetime, timezone
+    from testweavex.core.models import TestCase, TestType, generate_stable_id
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    tc = TestCase(
+        id=generate_stable_id("f", "patch"),
+        title="Original title",
+        feature_id=generate_stable_id("f"),
+        gherkin="Scenario: x",
+        test_type=TestType.smoke,
+        skill="builtin",
+        created_at=now, updated_at=now,
+    )
+    client.app.state.repo.upsert_test_case(tc)
+    response = client.patch(f"/api/test-cases/{tc.id}", json={
+        "title": "Updated title",
+        "priority": 1,
+        "is_automated": True,
+        "tags": ["regression"],
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["title"] == "Updated title"
+    assert data["priority"] == 1
+    assert data["is_automated"] is True
+    assert "regression" in data["tags"]
+
+
+def test_test_case_patch_not_found(client):
+    response = client.patch("/api/test-cases/nonexistent", json={"title": "x"})
+    assert response.status_code == 404
+
+
+def test_test_case_delete(client):
+    from datetime import datetime, timezone
+    from testweavex.core.models import TestCase, TestType, generate_stable_id
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    tc = TestCase(
+        id=generate_stable_id("f", "del"),
+        title="To delete",
+        feature_id=generate_stable_id("f"),
+        gherkin="Scenario: del",
+        test_type=TestType.smoke,
+        skill="builtin",
+        created_at=now, updated_at=now,
+    )
+    client.app.state.repo.upsert_test_case(tc)
+    response = client.delete(f"/api/test-cases/{tc.id}")
+    assert response.status_code == 204
+    assert client.get(f"/api/test-cases/{tc.id}").status_code == 404
+
+
+def test_test_case_delete_not_found(client):
+    response = client.delete("/api/test-cases/nonexistent")
+    assert response.status_code == 404
+
+
+def test_test_cases_search_filter(client):
+    from datetime import datetime, timezone
+    from testweavex.core.models import TestCase, TestType, generate_stable_id
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    for title in ("Login flow", "Logout flow", "Password reset"):
+        tc = TestCase(
+            id=generate_stable_id("f", title),
+            title=title,
+            feature_id=generate_stable_id("f"),
+            gherkin="Scenario: x",
+            test_type=TestType.smoke,
+            skill="builtin",
+            created_at=now, updated_at=now,
+        )
+        client.app.state.repo.upsert_test_case(tc)
+    response = client.get("/api/test-cases?search=login")
+    assert response.status_code == 200
+    results = response.json()
+    assert len(results) == 1
+    assert results[0]["title"] == "Login flow"
+
+
 def test_gap_generate_returns_200_with_generation_response(client):
     from datetime import datetime, timezone
     from testweavex.core.models import (

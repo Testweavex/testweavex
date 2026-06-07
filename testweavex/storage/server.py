@@ -139,3 +139,20 @@ class ServerRepository(StorageRepository):
     def get_scoring_signals(self, tc_id: str) -> ScoringSignals:
         resp = self._get(f"/test-cases/{tc_id}/signals")
         return ScoringSignals(**resp.json())
+
+    def delete_test_case(self, id: str) -> None:
+        from testweavex.core.exceptions import RecordNotFound
+        try:
+            resp = self._client.delete(f"/test-cases/{id}")
+            if resp.status_code == 404:
+                raise RecordNotFound(f"TestCase not found: {id}")
+            resp.raise_for_status()
+        except RecordNotFound:
+            raise
+        except Exception as exc:
+            raise StorageError(f"Server error on DELETE /test-cases/{id}: {exc}") from exc
+
+    def get_results_for_test_case(self, tc_id: str, limit: int = 10) -> list[TestResult]:
+        resp = self._get(f"/test-cases/{tc_id}?include_results=true")
+        data = resp.json()
+        return [TestResult(**r) for r in data.get("recent_results", [])]
