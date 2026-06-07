@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { getDashboard, getTestCases, getGaps, generateForGap, getRuns, getRun, getSettings, updateSettings, getTestCase, createTestCase, updateTestCase, deleteTestCase } from './api.js'
+import { getDashboard, getTestCases, getGaps, generateForGap, getRuns, getRun, getSettings, updateSettings, getTestCase, createTestCase, updateTestCase, deleteTestCase, executeTestCase } from './api.js'
 
 function mockFetch(data, ok = true) {
   global.fetch = vi.fn().mockResolvedValue({
@@ -201,5 +201,23 @@ describe('deleteTestCase', () => {
   it('throws on non-ok response', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 })
     await expect(deleteTestCase('tc-1')).rejects.toThrow('HTTP')
+  })
+})
+
+describe('executeTestCase', () => {
+  it('POSTs to /api/test-cases/:id/execute with JSON body', async () => {
+    const body = { steps: [{ keyword: 'Given', text: 'I do X', status: 'passed' }], notes: '', duration_ms: 1000 }
+    mockFetch({ result: { status: 'passed' }, test_case: { status: 'passed' } })
+    await executeTestCase('tc-1', body)
+    expect(global.fetch).toHaveBeenCalledWith('/api/test-cases/tc-1/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  })
+
+  it('throws on non-ok response', async () => {
+    mockFetch({}, false)
+    await expect(executeTestCase('tc-1', {})).rejects.toThrow('HTTP')
   })
 })

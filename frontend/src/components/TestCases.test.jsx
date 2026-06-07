@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import TestCases from './TestCases.jsx'
@@ -10,6 +10,7 @@ vi.mock('../api.js', () => ({
   createTestCase: vi.fn(),
   updateTestCase: vi.fn(),
   deleteTestCase: vi.fn(),
+  executeTestCase: vi.fn(),
 }))
 
 const mockCases = [
@@ -128,14 +129,17 @@ describe('TestCases — detail panel', () => {
     expect(api.getTestCase).toHaveBeenCalledWith('tc-1')
   })
 
-  it('shows gherkin in detail panel', async () => {
+  it('shows steps in detail panel', async () => {
     const user = userEvent.setup()
     api.getTestCases.mockResolvedValue(mockCases)
     api.getTestCase.mockResolvedValue(mockDetail)
     render(<TestCases />)
     await screen.findByText('Login smoke test')
     await user.click(screen.getByText('Login smoke test'))
-    expect(await screen.findByText(/Given I am on login page/)).toBeInTheDocument()
+    // Steps are rendered as keyword + text in separate spans
+    expect(await screen.findByText('I am on login page')).toBeInTheDocument()
+    expect(screen.getByText('I submit valid credentials')).toBeInTheDocument()
+    expect(screen.getByText('I am logged in')).toBeInTheDocument()
   })
 
   it('shows recent results in detail panel', async () => {
@@ -273,6 +277,130 @@ describe('TestCases — create', () => {
     await user.click(screen.getByText('+ New'))
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByTestId('detail-panel')).not.toBeInTheDocument()
+  })
+})
+
+describe('TestCases — steps display', () => {
+  beforeEach(() => { vi.resetAllMocks() })
+
+  it('shows structured steps instead of raw gherkin pre block', async () => {
+    const user = userEvent.setup()
+    api.getTestCases.mockResolvedValue(mockCases)
+    api.getTestCase.mockResolvedValue(mockDetail)
+    render(<TestCases />)
+    await screen.findByText('Login smoke test')
+    await user.click(screen.getByText('Login smoke test'))
+    await screen.findByTestId('detail-panel')
+    expect(screen.getByText('Given')).toBeInTheDocument()
+    expect(screen.getByText('I am on login page')).toBeInTheDocument()
+    expect(screen.getByText('When')).toBeInTheDocument()
+    expect(screen.getByText('I submit valid credentials')).toBeInTheDocument()
+    expect(screen.getByText('Then')).toBeInTheDocument()
+    expect(screen.getByText('I am logged in')).toBeInTheDocument()
+  })
+
+  it('shows Steps section label', async () => {
+    const user = userEvent.setup()
+    api.getTestCases.mockResolvedValue(mockCases)
+    api.getTestCase.mockResolvedValue(mockDetail)
+    render(<TestCases />)
+    await screen.findByText('Login smoke test')
+    await user.click(screen.getByText('Login smoke test'))
+    const panel = await screen.findByTestId('detail-panel')
+    expect(within(panel).getByText('Steps')).toBeInTheDocument()
+  })
+
+  it('shows Run Manually button in detail panel', async () => {
+    const user = userEvent.setup()
+    api.getTestCases.mockResolvedValue(mockCases)
+    api.getTestCase.mockResolvedValue(mockDetail)
+    render(<TestCases />)
+    await screen.findByText('Login smoke test')
+    await user.click(screen.getByText('Login smoke test'))
+    expect(await screen.findByTestId('run-manually-btn')).toBeInTheDocument()
+  })
+})
+
+describe('TestCases — execute', () => {
+  beforeEach(() => { vi.resetAllMocks() })
+
+  it('opens execute mode on "Run Manually" click', async () => {
+    const user = userEvent.setup()
+    api.getTestCases.mockResolvedValue(mockCases)
+    api.getTestCase.mockResolvedValue(mockDetail)
+    render(<TestCases />)
+    await screen.findByText('Login smoke test')
+    await user.click(screen.getByText('Login smoke test'))
+    await screen.findByTestId('run-manually-btn')
+    await user.click(screen.getByTestId('run-manually-btn'))
+    expect(screen.getByText('Manual Execution')).toBeInTheDocument()
+    expect(screen.getByTestId('execute-timer')).toBeInTheDocument()
+    expect(screen.getByTestId('complete-execution-btn')).toBeInTheDocument()
+  })
+
+  it('shows parsed steps in execute mode', async () => {
+    const user = userEvent.setup()
+    api.getTestCases.mockResolvedValue(mockCases)
+    api.getTestCase.mockResolvedValue(mockDetail)
+    render(<TestCases />)
+    await screen.findByText('Login smoke test')
+    await user.click(screen.getByText('Login smoke test'))
+    await screen.findByTestId('run-manually-btn')
+    await user.click(screen.getByTestId('run-manually-btn'))
+    // Each step renders with Pass/Fail/Skip buttons
+    const passButtons = screen.getAllByText('✓ Pass')
+    expect(passButtons.length).toBeGreaterThan(0)
+    expect(screen.getAllByText('✗ Fail').length).toBeGreaterThan(0)
+  })
+
+  it('Cancel from execute returns to view mode', async () => {
+    const user = userEvent.setup()
+    api.getTestCases.mockResolvedValue(mockCases)
+    api.getTestCase.mockResolvedValue(mockDetail)
+    render(<TestCases />)
+    await screen.findByText('Login smoke test')
+    await user.click(screen.getByText('Login smoke test'))
+    await screen.findByTestId('run-manually-btn')
+    await user.click(screen.getByTestId('run-manually-btn'))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByText('Manual Execution')).not.toBeInTheDocument()
+    expect(screen.getByTestId('run-manually-btn')).toBeInTheDocument()
+  })
+
+  it('calls executeTestCase and updates status on complete', async () => {
+    const user = userEvent.setup()
+    api.getTestCases.mockResolvedValue(mockCases)
+    api.getTestCase.mockResolvedValue(mockDetail)
+    api.executeTestCase.mockResolvedValue({
+      result: { id: 'r-new', status: 'passed', duration_ms: 5000 },
+      test_case: { ...mockDetail, status: 'passed' },
+    })
+    render(<TestCases />)
+    await screen.findByText('Login smoke test')
+    await user.click(screen.getByText('Login smoke test'))
+    await screen.findByTestId('run-manually-btn')
+    await user.click(screen.getByTestId('run-manually-btn'))
+    await user.click(screen.getByTestId('complete-execution-btn'))
+    expect(api.executeTestCase).toHaveBeenCalledWith('tc-1', expect.objectContaining({
+      steps: expect.any(Array),
+      notes: expect.any(String),
+      duration_ms: expect.any(Number),
+    }))
+    expect(await screen.findByTestId('run-manually-btn')).toBeInTheDocument()
+  })
+
+  it('marks a step as failed and shows failed overall status', async () => {
+    const user = userEvent.setup()
+    api.getTestCases.mockResolvedValue(mockCases)
+    api.getTestCase.mockResolvedValue(mockDetail)
+    render(<TestCases />)
+    await screen.findByText('Login smoke test')
+    await user.click(screen.getByText('Login smoke test'))
+    await screen.findByTestId('run-manually-btn')
+    await user.click(screen.getByTestId('run-manually-btn'))
+    const failButtons = screen.getAllByText('✗ Fail')
+    await user.click(failButtons[0])
+    expect(screen.getByText('failed')).toBeInTheDocument()
   })
 })
 

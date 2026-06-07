@@ -146,3 +146,57 @@ async def delete_test_case(tc_id: str, request: Request) -> None:
         repo.delete_test_case(tc_id)
     except RecordNotFound:
         raise HTTPException(status_code=404, detail="Test case not found")
+
+
+class StepResult(BaseModel):
+    keyword: str
+    text: str
+    status: str = "passed"
+
+
+class ManualExecutionBody(BaseModel):
+    steps: list[StepResult] = []
+    notes: str = ""
+    duration_ms: int = 0
+
+
+@router.post("/test-cases/{tc_id}/execute", status_code=201)
+async def execute_test_case(tc_id: str, body: ManualExecutionBody, request: Request) -> dict:
+    import uuid as _uuid
+    from testweavex.core.models import TestResult
+
+    repo = request.app.state.repo
+    try:
+        tc = repo.get_test_case(tc_id)
+    except RecordNotFound:
+        raise HTTPException(status_code=404, detail="Test case not found")
+
+    step_statuses = [s.status for s in body.steps] if body.steps else ["passed"]
+    if any(s == "failed" for s in step_statuses):
+        overall = TestStatus.failed
+    elif all(s == "skipped" for s in step_statuses):
+        overall = TestStatus.skipped
+    else:
+        overall = TestStatus.passed
+
+    run = repo.start_run(suite="manual", environment="local", triggered_by="manual")
+
+    result = TestResult(
+        id=str(_uuid.uuid4()),
+        run_id=run.id,
+        test_case_id=tc_id,
+        status=overall,
+        duration_ms=max(0, body.duration_ms),
+        error_message=body.notes if (body.notes and overall == TestStatus.failed) else None,
+    )
+    repo.save_result(result)
+    repo.end_run(run.id)
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    updated_tc = tc.model_copy(update={"status": overall, "updated_at": now})
+    repo.upsert_test_case(updated_tc)
+
+    return {
+        "result": result.model_dump(mode="json"),
+        "test_case": updated_tc.model_dump(mode="json"),
+    }

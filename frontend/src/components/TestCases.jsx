@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getTestCases, getTestCase, createTestCase, updateTestCase, deleteTestCase } from '../api.js'
+import {
+  getTestCases, getTestCase,
+  createTestCase, updateTestCase, deleteTestCase,
+  executeTestCase,
+} from '../api.js'
 
 const TEST_TYPES = [
   'smoke', 'e2e', 'integration', 'sanity',
-  'happy_path', 'data_driven', 'edge_case', 'accessibility',
+  'happy_path', 'data_driven', 'edge_cases', 'accessibility',
   'system', 'cross_browser',
 ]
 
@@ -45,6 +49,26 @@ function formatDuration(ms) {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`
 }
 
+function parseSteps(gherkin) {
+  if (!gherkin) return []
+  const steps = []
+  for (const rawLine of gherkin.split('\n')) {
+    const line = rawLine.trim()
+    const m = line.match(/^(Given|When|Then|And|But)\s+(.+)/)
+    if (m) steps.push({ keyword: m[1], text: m[2] })
+  }
+  return steps
+}
+
+function parseScenarioTitle(gherkin) {
+  if (!gherkin) return null
+  for (const rawLine of gherkin.split('\n')) {
+    const m = rawLine.trim().match(/^Scenario(?:\s+Outline)?:\s*(.+)/)
+    if (m) return m[1]
+  }
+  return null
+}
+
 export default function TestCases() {
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
@@ -57,12 +81,16 @@ export default function TestCases() {
   const [selectedId, setSelectedId] = useState(null)
   const [detail, setDetail] = useState({ loading: false, data: null, error: null })
 
-  const [mode, setMode] = useState('view')  // 'view' | 'edit' | 'create'
+  // mode: 'view' | 'edit' | 'create' | 'execute'
+  const [mode, setMode] = useState('view')
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const [executing, setExecuting] = useState(false)
+  const [executeError, setExecuteError] = useState(null)
 
   useEffect(() => {
     getTestCases()
@@ -82,14 +110,12 @@ export default function TestCases() {
   }, [])
 
   function handleRowClick(tc) {
-    if (selectedId === tc.id && mode === 'view') {
-      closePanel()
-      return
-    }
+    if (selectedId === tc.id && mode === 'view') { closePanel(); return }
     setSelectedId(tc.id)
     setMode('view')
     setDeleteConfirm(false)
     setSaveError(null)
+    setExecuteError(null)
     loadDetail(tc.id)
   }
 
@@ -98,6 +124,7 @@ export default function TestCases() {
     setMode('view')
     setDeleteConfirm(false)
     setSaveError(null)
+    setExecuteError(null)
   }
 
   function startEdit() {
@@ -113,6 +140,11 @@ export default function TestCases() {
     setSaveError(null)
     setDeleteConfirm(false)
     setMode('create')
+  }
+
+  function startExecute() {
+    setExecuteError(null)
+    setMode('execute')
   }
 
   async function handleSave() {
@@ -160,6 +192,23 @@ export default function TestCases() {
     }
   }
 
+  async function handleExecuteComplete({ steps, notes, duration_ms }) {
+    setExecuting(true)
+    setExecuteError(null)
+    try {
+      const res = await executeTestCase(selectedId, { steps, notes, duration_ms })
+      setCases(prev => prev.map(tc =>
+        tc.id === selectedId ? { ...tc, status: res.test_case.status } : tc
+      ))
+      await loadDetail(selectedId)
+      setMode('view')
+    } catch (e) {
+      setExecuteError(e.message)
+    } finally {
+      setExecuting(false)
+    }
+  }
+
   if (loading) return <div className="content" data-testid="test-cases-view"><p style={{ color: 'var(--text-mut)' }}>Loading…</p></div>
   if (error) return <div className="content" data-testid="test-cases-view"><p style={{ color: 'var(--fail)' }}>Error: {error}</p></div>
 
@@ -175,6 +224,12 @@ export default function TestCases() {
   })
 
   const panelOpen = selectedId !== null || mode === 'create'
+
+  const panelTitle =
+    mode === 'create' ? 'New Test Case' :
+    mode === 'edit' ? 'Edit Test Case' :
+    mode === 'execute' ? `Execute: ${detail.data?.title || '…'}` :
+    (detail.data?.title || '…')
 
   return (
     <div
@@ -259,13 +314,11 @@ export default function TestCases() {
         </div>
       </div>
 
-      {/* ── Detail / Edit / Create panel ── */}
+      {/* ── Detail / Edit / Create / Execute panel ── */}
       {panelOpen && (
         <div className="detail-panel" data-testid="detail-panel">
           <div className="panel-header">
-            <span className="panel-title">
-              {mode === 'create' ? 'New Test Case' : mode === 'edit' ? 'Edit Test Case' : (detail.data?.title || '…')}
-            </span>
+            <span className="panel-title">{panelTitle}</span>
             <button className="panel-close" onClick={closePanel} aria-label="Close panel">×</button>
           </div>
 
@@ -279,6 +332,16 @@ export default function TestCases() {
                 saving={saving}
                 saveError={saveError}
               />
+            ) : mode === 'execute' ? (
+              detail.data ? (
+                <ExecuteView
+                  tc={detail.data}
+                  onComplete={handleExecuteComplete}
+                  onCancel={() => setMode('view')}
+                  executing={executing}
+                  executeError={executeError}
+                />
+              ) : null
             ) : detail.loading ? (
               <p style={{ color: 'var(--text-mut)' }}>Loading…</p>
             ) : detail.error ? (
@@ -287,6 +350,7 @@ export default function TestCases() {
               <DetailView
                 tc={detail.data}
                 onEdit={startEdit}
+                onExecute={startExecute}
                 onDelete={handleDelete}
                 deleteConfirm={deleteConfirm}
                 deleting={deleting}
@@ -299,6 +363,160 @@ export default function TestCases() {
     </div>
   )
 }
+
+// ── Structured step display ────────────────────────────────────────────────
+
+function StepsDisplay({ gherkin }) {
+  const title = parseScenarioTitle(gherkin)
+  const steps = parseSteps(gherkin)
+
+  if (!gherkin) return null
+
+  if (!steps.length && !title) {
+    return <pre className="gherkin" style={{ color: '#CDD6F4' }}>{gherkin}</pre>
+  }
+
+  return (
+    <div className="steps-list">
+      {title && <div className="step-scenario-title">Scenario: {title}</div>}
+      {steps.map((s, i) => (
+        <div key={i} className="step-item">
+          <span className="step-keyword">{s.keyword}</span>
+          <span className="step-text">{s.text}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Execute view ───────────────────────────────────────────────────────────
+
+function ExecuteView({ tc, onComplete, onCancel, executing, executeError }) {
+  const steps = parseSteps(tc.gherkin)
+  const [stepResults, setStepResults] = useState(() => steps.map(() => 'passed'))
+  const [directResult, setDirectResult] = useState('passed')
+  const [notes, setNotes] = useState('')
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(s => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  function setStep(i, status) {
+    setStepResults(prev => prev.map((s, idx) => idx === i ? status : s))
+  }
+
+  const hasSteps = steps.length > 0
+
+  const overallStatus = hasSteps
+    ? (stepResults.some(s => s === 'failed') ? 'failed'
+       : stepResults.every(s => s === 'skipped') ? 'skipped'
+       : 'passed')
+    : directResult
+
+  const mins = Math.floor(elapsed / 60).toString().padStart(2, '0')
+  const secs = (elapsed % 60).toString().padStart(2, '0')
+
+  function handleComplete() {
+    const payload = hasSteps
+      ? { steps: steps.map((s, i) => ({ ...s, status: stepResults[i] })), notes, duration_ms: elapsed * 1000 }
+      : { steps: [{ keyword: 'Manual', text: tc.title, status: directResult }], notes, duration_ms: elapsed * 1000 }
+    onComplete(payload)
+  }
+
+  return (
+    <>
+      <div className="execute-header">
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-sec)' }}>Manual Execution</span>
+        <span className="execute-timer" data-testid="execute-timer">{mins}:{secs}</span>
+      </div>
+
+      {hasSteps ? (
+        steps.map((step, i) => (
+          <div key={i} className={`execute-step step-${stepResults[i]}`} data-testid={`execute-step-${i}`}>
+            <div className="execute-step-line">
+              <span className="execute-step-kw">{step.keyword}</span>
+              <span className="execute-step-text">{step.text}</span>
+            </div>
+            <div className="execute-step-btns">
+              {[['passed', '✓ Pass', 'active-pass'], ['failed', '✗ Fail', 'active-fail'], ['skipped', '− Skip', 'active-skip']].map(
+                ([status, label, cls]) => (
+                  <button
+                    key={status}
+                    className={`step-btn${stepResults[i] === status ? ` ${cls}` : ''}`}
+                    onClick={() => setStep(i, status)}
+                  >
+                    {label}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div style={{ marginBottom: '16px' }}>
+          <p style={{ color: 'var(--text-sec)', fontSize: '13px', marginBottom: '12px' }}>
+            No Gherkin steps found. Record overall result:
+          </p>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[['passed', '✓ Pass', 'active-pass'], ['failed', '✗ Fail', 'active-fail'], ['skipped', '− Skip', 'active-skip']].map(
+              ([status, label, cls]) => (
+                <button
+                  key={status}
+                  className={`step-btn${directResult === status ? ` ${cls}` : ''}`}
+                  onClick={() => setDirectResult(status)}
+                >
+                  {label}
+                </button>
+              )
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="form-row" style={{ marginTop: '16px' }}>
+        <label className="form-label">Notes / Observations</label>
+        <textarea
+          className="form-input"
+          rows={3}
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Failure details, environment notes, reproduction steps…"
+          style={{ resize: 'vertical', fontSize: '12px' }}
+          aria-label="Execution notes"
+        />
+      </div>
+
+      <div className={`execute-overall status-${overallStatus}`}>
+        <span style={{ color: 'var(--text-sec)' }}>Overall result:</span>
+        <span className={`badge badge-${overallStatus === 'passed' ? 'pass' : overallStatus === 'failed' ? 'fail' : 'skip'}`}>
+          {overallStatus}
+        </span>
+      </div>
+
+      {executeError && (
+        <p style={{ color: 'var(--fail)', fontSize: '12px', marginBottom: '12px' }}>{executeError}</p>
+      )}
+
+      <div style={{ display: 'flex', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={handleComplete}
+          disabled={executing}
+          data-testid="complete-execution-btn"
+        >
+          {executing ? 'Saving…' : 'Complete Execution'}
+        </button>
+        <button className="btn btn-ghost btn-sm" onClick={onCancel} disabled={executing}>
+          Cancel
+        </button>
+      </div>
+    </>
+  )
+}
+
+// ── Edit / Create form ─────────────────────────────────────────────────────
 
 function EditForm({ form, setForm, onSave, onCancel, saving, saveError }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -373,7 +591,9 @@ function EditForm({ form, setForm, onSave, onCancel, saving, saveError }) {
   )
 }
 
-function DetailView({ tc, onEdit, onDelete, deleteConfirm, deleting, saveError }) {
+// ── Detail view ────────────────────────────────────────────────────────────
+
+function DetailView({ tc, onEdit, onExecute, onDelete, deleteConfirm, deleting, saveError }) {
   return (
     <>
       <div className="panel-section">
@@ -392,10 +612,12 @@ function DetailView({ tc, onEdit, onDelete, deleteConfirm, deleting, saveError }
         )}
       </div>
 
-      <div className="panel-section">
-        <div className="panel-label">Gherkin</div>
-        <pre className="gherkin">{tc.gherkin}</pre>
-      </div>
+      {tc.gherkin && (
+        <div className="panel-section">
+          <div className="panel-label">Steps</div>
+          <StepsDisplay gherkin={tc.gherkin} />
+        </div>
+      )}
 
       {tc.recent_results && tc.recent_results.length > 0 && (
         <div className="panel-section">
@@ -436,7 +658,10 @@ function DetailView({ tc, onEdit, onDelete, deleteConfirm, deleting, saveError }
 
       {saveError && <p style={{ color: 'var(--fail)', fontSize: '12px', marginBottom: '12px' }}>{saveError}</p>}
 
-      <div style={{ display: 'flex', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+        <button className="btn btn-green btn-sm" onClick={onExecute} data-testid="run-manually-btn">
+          ▶ Run Manually
+        </button>
         <button className="btn btn-ghost btn-sm" onClick={onEdit}>Edit</button>
         <button
           className={`btn btn-sm ${deleteConfirm ? 'btn-red' : 'btn-ghost'}`}

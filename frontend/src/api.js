@@ -82,3 +82,13 @@ export const updateSettings = (body) =>
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     return r.json()
   })
+
+export const executeTestCase = (id, body) =>
+  fetch(`${BASE}/api/test-cases/${id}/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return r.json()
+  })

@@ -17,6 +17,7 @@ vi.mock('./api.js', () => ({
   createTestCase: vi.fn(),
   updateTestCase: vi.fn(),
   deleteTestCase: vi.fn(),
+  executeTestCase: vi.fn(),
 }))
 
 describe('App navigation', () => {

@@ -243,6 +243,94 @@ def test_test_case_delete_not_found(client):
     assert response.status_code == 404
 
 
+def _make_tc(client, title="Test case", gherkin=None):
+    from datetime import datetime, timezone
+    from testweavex.core.models import TestCase, TestType, generate_stable_id
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    tc = TestCase(
+        id=generate_stable_id("f", title),
+        title=title,
+        feature_id=generate_stable_id("f"),
+        gherkin=gherkin or f"Scenario: {title}\n  Given the test exists",
+        test_type=TestType.smoke,
+        skill="builtin",
+        created_at=now, updated_at=now,
+    )
+    client.app.state.repo.upsert_test_case(tc)
+    return tc
+
+
+def test_execute_test_case_returns_201(client):
+    tc = _make_tc(client, "Execute me", "Scenario: Execute me\n  Given I do something\n  Then it works")
+    response = client.post(f"/api/test-cases/{tc.id}/execute", json={
+        "steps": [
+            {"keyword": "Given", "text": "I do something", "status": "passed"},
+            {"keyword": "Then", "text": "it works", "status": "passed"},
+        ],
+        "notes": "",
+        "duration_ms": 3000,
+    })
+    assert response.status_code == 201
+    data = response.json()
+    assert "result" in data
+    assert "test_case" in data
+    assert data["result"]["status"] == "passed"
+    assert data["result"]["duration_ms"] == 3000
+    assert data["test_case"]["status"] == "passed"
+
+
+def test_execute_test_case_failed_step_sets_overall_failed(client):
+    tc = _make_tc(client, "Fail case")
+    response = client.post(f"/api/test-cases/{tc.id}/execute", json={
+        "steps": [
+            {"keyword": "Given", "text": "I set up", "status": "passed"},
+            {"keyword": "Then", "text": "it fails", "status": "failed"},
+        ],
+        "notes": "step 2 broke",
+        "duration_ms": 1500,
+    })
+    assert response.status_code == 201
+    data = response.json()
+    assert data["result"]["status"] == "failed"
+    assert data["result"]["error_message"] == "step 2 broke"
+    assert data["test_case"]["status"] == "failed"
+
+
+def test_execute_test_case_all_skipped_sets_skipped(client):
+    tc = _make_tc(client, "Skip case")
+    response = client.post(f"/api/test-cases/{tc.id}/execute", json={
+        "steps": [{"keyword": "Given", "text": "blocked", "status": "skipped"}],
+        "notes": "",
+        "duration_ms": 0,
+    })
+    assert response.status_code == 201
+    assert response.json()["result"]["status"] == "skipped"
+
+
+def test_execute_test_case_no_steps_defaults_to_passed(client):
+    tc = _make_tc(client, "No steps case")
+    response = client.post(f"/api/test-cases/{tc.id}/execute", json={
+        "steps": [],
+        "notes": "",
+        "duration_ms": 0,
+    })
+    assert response.status_code == 201
+    assert response.json()["result"]["status"] == "passed"
+
+
+def test_execute_test_case_not_found(client):
+    response = client.post("/api/test-cases/nonexistent/execute", json={"steps": [], "notes": "", "duration_ms": 0})
+    assert response.status_code == 404
+
+
+def test_execute_updates_recent_results(client):
+    tc = _make_tc(client, "Result check")
+    client.post(f"/api/test-cases/{tc.id}/execute", json={"steps": [], "notes": "", "duration_ms": 500})
+    detail = client.get(f"/api/test-cases/{tc.id}").json()
+    assert len(detail["recent_results"]) == 1
+    assert detail["recent_results"][0]["status"] == "passed"
+
+
 def test_test_cases_search_filter(client):
     from datetime import datetime, timezone
     from testweavex.core.models import TestCase, TestType, generate_stable_id
