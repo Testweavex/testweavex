@@ -189,12 +189,61 @@ def gaps(
 
 @app.command()
 def generate(
-    feature: str = typer.Option(..., "--feature"),
-    skill: str = typer.Option("functional/smoke", "--skill"),
+    feature: str = typer.Option(..., "--feature", help="Feature description to generate tests for"),
+    skill: str = typer.Option("functional/smoke", "--skill", help="Skill to use (e.g. functional/smoke)"),
+    category: str = typer.Option("generated", "--category", help="Output category under features/"),
+    n: int = typer.Option(5, "--n", help="Number of scenario suggestions to request"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing files"),
 ) -> None:
-    """Generate tests with LLM for a given feature description."""
-    console.print("[red]tw generate is not yet wired to the generation engine in this release.[/red]")
-    raise typer.Exit(code=1)
+    """Generate Gherkin tests with LLM for a feature description."""
+    from testweavex.core.exceptions import ConfigError, GenerationError, LLMOutputError, SkillNotFoundError
+    from testweavex.core.models import GenerationRequest
+    from testweavex.generation.engine import GenerationEngine, RichReviewCallback
+    from testweavex.llm.base import get_llm_adapter
+
+    config = load_config()
+
+    try:
+        adapter = get_llm_adapter(config)
+    except ConfigError as exc:
+        console.print(f"[red]Configuration error:[/red] {exc}")
+        raise typer.Exit(code=1)
+
+    if not adapter.health_check():
+        console.print(
+            "[red]LLM provider is not available. Check your API key and provider config.[/red]"
+        )
+        raise typer.Exit(code=1)
+
+    request = GenerationRequest(
+        feature_description=feature,
+        skill_names=[skill],
+        n_suggestions=n,
+    )
+    engine = GenerationEngine(adapter, config, RichReviewCallback())
+
+    try:
+        result = engine.run(request, category, dry_run=dry_run)
+    except (LLMOutputError, SkillNotFoundError, GenerationError) as exc:
+        console.print(f"[red]Generation failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+
+    if result.scenarios_approved == 0:
+        console.print("[yellow]No scenarios approved — nothing written.[/yellow]")
+        return
+
+    if not dry_run:
+        console.print(
+            f"\n[green]Generated {result.scenarios_approved}/{result.scenarios_total} scenario(s)[/green]"
+        )
+        for path in result.written_files:
+            console.print(f"  → {path}")
+        if result.step_files_written:
+            console.print(f"[green]{result.new_steps} new step definition(s) written:[/green]")
+            for path in result.step_files_written:
+                console.print(f"  → {path}")
+        if result.reused_steps:
+            console.print(f"  ({result.reused_steps} existing step(s) reused)")
 
 
 @app.command()

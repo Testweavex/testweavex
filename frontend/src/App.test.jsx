@@ -9,6 +9,14 @@ vi.mock('./api.js', () => ({
   getTestCases: vi.fn(),
   getGaps: vi.fn(),
   generateForGap: vi.fn(),
+  getRuns: vi.fn(),
+  getRun: vi.fn(),
+  getSettings: vi.fn(),
+  updateSettings: vi.fn(),
+  getTestCase: vi.fn(),
+  createTestCase: vi.fn(),
+  updateTestCase: vi.fn(),
+  deleteTestCase: vi.fn(),
 }))
 
 describe('App navigation', () => {
@@ -16,14 +24,18 @@ describe('App navigation', () => {
     api.getDashboard.mockReturnValue(new Promise(() => {}))
     api.getTestCases.mockReturnValue(new Promise(() => {}))
     api.getGaps.mockReturnValue(new Promise(() => {}))
+    api.getRuns.mockReturnValue(new Promise(() => {}))
+    api.getSettings.mockReturnValue(new Promise(() => {}))
   })
 
-  it('renders sidebar with 3 nav items', () => {
+  it('renders sidebar with 5 nav items', () => {
     render(<App />)
     expect(screen.getByRole('navigation')).toBeInTheDocument()
     expect(screen.getAllByText('Dashboard').length).toBeGreaterThan(0)
     expect(screen.getByText('Test Cases')).toBeInTheDocument()
     expect(screen.getByText('Gap Report')).toBeInTheDocument()
+    expect(screen.getByText('Test Runs')).toBeInTheDocument()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
   it('Dashboard view is active by default', () => {
@@ -31,6 +43,8 @@ describe('App navigation', () => {
     expect(screen.getByTestId('dashboard-view')).toBeInTheDocument()
     expect(screen.queryByTestId('test-cases-view')).not.toBeInTheDocument()
     expect(screen.queryByTestId('gap-report-view')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('test-runs-view')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('settings-view')).not.toBeInTheDocument()
   })
 
   it('navigates to Test Cases on sidebar click', async () => {
@@ -46,6 +60,22 @@ describe('App navigation', () => {
     render(<App />)
     await user.click(screen.getByText('Gap Report'))
     expect(screen.getByTestId('gap-report-view')).toBeInTheDocument()
+    expect(screen.queryByTestId('dashboard-view')).not.toBeInTheDocument()
+  })
+
+  it('navigates to Test Runs on sidebar click', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('Test Runs'))
+    expect(screen.getByTestId('test-runs-view')).toBeInTheDocument()
+    expect(screen.queryByTestId('dashboard-view')).not.toBeInTheDocument()
+  })
+
+  it('navigates to Settings on sidebar click', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('Settings'))
+    expect(screen.getByTestId('settings-view')).toBeInTheDocument()
     expect(screen.queryByTestId('dashboard-view')).not.toBeInTheDocument()
   })
 })

@@ -3,11 +3,15 @@ import Sidebar from './components/Sidebar.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import TestCases from './components/TestCases.jsx'
 import GapReport from './components/GapReport.jsx'
+import TestRuns from './components/TestRuns.jsx'
+import Settings from './components/Settings.jsx'
 
 const TITLES = {
   dashboard: 'Dashboard',
   'test-cases': 'Test Cases',
   gaps: 'Gap Report',
+  runs: 'Test Runs',
+  settings: 'Settings',
 }
 
 export default function App() {
@@ -23,6 +27,8 @@ export default function App() {
         {view === 'dashboard' && <Dashboard />}
         {view === 'test-cases' && <TestCases />}
         {view === 'gaps' && <GapReport />}
+        {view === 'runs' && <TestRuns />}
+        {view === 'settings' && <Settings />}
       </div>
     </div>
   )

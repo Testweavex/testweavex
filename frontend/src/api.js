@@ -23,3 +23,62 @@ export const generateForGap = (gapId) =>
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     return r.json()
   })
+
+export const getTestCase = (id) =>
+  fetch(`${BASE}/api/test-cases/${id}`).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return r.json()
+  })
+
+export const createTestCase = (body) =>
+  fetch(`${BASE}/api/test-cases`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return r.json()
+  })
+
+export const updateTestCase = (id, body) =>
+  fetch(`${BASE}/api/test-cases/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return r.json()
+  })
+
+export const deleteTestCase = (id) =>
+  fetch(`${BASE}/api/test-cases/${id}`, { method: 'DELETE' }).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  })
+
+export const getRuns = (limit = 50) =>
+  fetch(`${BASE}/api/runs?limit=${limit}`).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return r.json()
+  })
+
+export const getRun = (runId) =>
+  fetch(`${BASE}/api/runs/${runId}`).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return r.json()
+  })
+
+export const getSettings = () =>
+  fetch(`${BASE}/api/settings`).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return r.json()
+  })
+
+export const updateSettings = (body) =>
+  fetch(`${BASE}/api/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return r.json()
+  })

@@ -54,11 +54,97 @@ def test_tw_gaps_empty_db(tmp_path, monkeypatch):
     assert "No gaps found" in result.output
 
 
-def test_tw_generate_stub(tmp_path, monkeypatch):
+def _mock_adapter(health=True):
+    adapter = MagicMock()
+    adapter.health_check.return_value = health
+    return adapter
+
+
+def _mock_result(approved=2, total=3, files=None, step_files=None, reused=0, new_steps=0):
+    from testweavex.core.models import GenerationResult
+    return GenerationResult(
+        written_files=files or ["features/generated/smoke/login.feature"],
+        step_files_written=step_files or [],
+        reused_steps=reused,
+        new_steps=new_steps,
+        dry_run=False,
+        scenarios_approved=approved,
+        scenarios_total=total,
+    )
+
+
+def test_tw_generate_success(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    result = runner.invoke(app, ["generate", "--feature", "login", "--skill", "functional/smoke"])
+    with patch("testweavex.llm.base.get_llm_adapter", return_value=_mock_adapter()), \
+         patch("testweavex.generation.engine.GenerationEngine.run", return_value=_mock_result()):
+        result = runner.invoke(app, ["generate", "--feature", "User login", "--skill", "functional/smoke"])
+    assert result.exit_code == 0
+    assert "Generated 2/3" in result.output
+    assert "login.feature" in result.output
+
+
+def test_tw_generate_dry_run(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    dry_result = _mock_result(approved=3, total=3, files=[])
+    dry_result = dry_result.model_copy(update={"dry_run": True})
+    with patch("testweavex.llm.base.get_llm_adapter", return_value=_mock_adapter()), \
+         patch("testweavex.generation.engine.GenerationEngine.run", return_value=dry_result):
+        result = runner.invoke(app, ["generate", "--feature", "login", "--dry-run"])
+    assert result.exit_code == 0
+
+
+def test_tw_generate_config_error(tmp_path, monkeypatch):
+    from testweavex.core.exceptions import ConfigError
+    monkeypatch.chdir(tmp_path)
+    with patch("testweavex.llm.base.get_llm_adapter", side_effect=ConfigError("no API key")):
+        result = runner.invoke(app, ["generate", "--feature", "login"])
     assert result.exit_code == 1
-    assert "not yet wired" in result.output
+    assert "Configuration error" in result.output
+
+
+def test_tw_generate_llm_unavailable(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with patch("testweavex.llm.base.get_llm_adapter", return_value=_mock_adapter(health=False)):
+        result = runner.invoke(app, ["generate", "--feature", "login"])
+    assert result.exit_code == 1
+    assert "not available" in result.output
+
+
+def test_tw_generate_no_scenarios_approved(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    empty_result = _mock_result(approved=0, total=3, files=[])
+    with patch("testweavex.llm.base.get_llm_adapter", return_value=_mock_adapter()), \
+         patch("testweavex.generation.engine.GenerationEngine.run", return_value=empty_result):
+        result = runner.invoke(app, ["generate", "--feature", "login"])
+    assert result.exit_code == 0
+    assert "No scenarios approved" in result.output
+
+
+def test_tw_generate_llm_output_error(tmp_path, monkeypatch):
+    from testweavex.core.exceptions import LLMOutputError
+    monkeypatch.chdir(tmp_path)
+    with patch("testweavex.llm.base.get_llm_adapter", return_value=_mock_adapter()), \
+         patch("testweavex.generation.engine.GenerationEngine.run", side_effect=LLMOutputError("bad JSON")):
+        result = runner.invoke(app, ["generate", "--feature", "login"])
+    assert result.exit_code == 1
+    assert "Generation failed" in result.output
+
+
+def test_tw_generate_with_step_files(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    rich_result = _mock_result(
+        approved=2, total=2,
+        files=["features/generated/smoke/login.feature"],
+        step_files=["tests/step_definitions/login_steps.py"],
+        new_steps=3,
+        reused=1,
+    )
+    with patch("testweavex.llm.base.get_llm_adapter", return_value=_mock_adapter()), \
+         patch("testweavex.generation.engine.GenerationEngine.run", return_value=rich_result):
+        result = runner.invoke(app, ["generate", "--feature", "login"])
+    assert result.exit_code == 0
+    assert "login_steps.py" in result.output
+    assert "reused" in result.output
 
 
 def test_tw_serve_is_registered(tmp_path, monkeypatch):

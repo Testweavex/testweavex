@@ -302,3 +302,56 @@ def test_get_results_for_run(repo):
     results = repo.get_results_for_run(run.id)
     assert len(results) == 1
     assert results[0].run_id == run.id
+
+
+def test_delete_test_case(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    repo.delete_test_case(tc.id)
+    from testweavex.core.exceptions import RecordNotFound
+    with pytest.raises(RecordNotFound):
+        repo.get_test_case(tc.id)
+
+
+def test_delete_test_case_not_found(repo):
+    from testweavex.core.exceptions import RecordNotFound
+    with pytest.raises(RecordNotFound):
+        repo.delete_test_case("nonexistent-id")
+
+
+def test_get_results_for_test_case(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    run = repo.start_run("suite")
+    r = TestResult(
+        id=str(uuid.uuid4()),
+        run_id=run.id,
+        test_case_id=tc.id,
+        status=TestStatus.passed,
+        duration_ms=200,
+    )
+    repo.save_result(r)
+    results = repo.get_results_for_test_case(tc.id)
+    assert len(results) == 1
+    assert results[0].test_case_id == tc.id
+    assert results[0].status == TestStatus.passed
+
+
+def test_get_results_for_test_case_empty(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    results = repo.get_results_for_test_case(tc.id)
+    assert results == []
+
+
+def test_get_results_for_test_case_respects_limit(repo):
+    tc = _make_test_case()
+    repo.upsert_test_case(tc)
+    for _ in range(5):
+        run = repo.start_run("suite")
+        repo.save_result(TestResult(
+            id=str(uuid.uuid4()), run_id=run.id, test_case_id=tc.id,
+            status=TestStatus.passed, duration_ms=100,
+        ))
+    results = repo.get_results_for_test_case(tc.id, limit=3)
+    assert len(results) == 3

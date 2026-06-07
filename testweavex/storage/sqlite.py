@@ -443,3 +443,31 @@ class SQLiteRepository(StorageRepository):
                 return [_orm_to_test_result(r) for r in rows]
         except Exception as exc:
             raise StorageError(f"Failed to get results for run {run_id}") from exc
+
+    def delete_test_case(self, id: str) -> None:
+        try:
+            with self._session() as s:
+                row = s.get(TestCaseORM, id)
+                if row is None:
+                    raise RecordNotFound(f"TestCase not found: {id}")
+                s.delete(row)
+                s.commit()
+        except RecordNotFound:
+            raise
+        except Exception as exc:
+            raise StorageError(f"Failed to delete test case {id}") from exc
+
+    def get_results_for_test_case(self, tc_id: str, limit: int = 10) -> list[TestResult]:
+        try:
+            with self._session() as s:
+                rows = (
+                    s.query(TestResultORM)
+                    .join(TestRunORM, TestResultORM.run_id == TestRunORM.id)
+                    .filter(TestResultORM.test_case_id == tc_id)
+                    .order_by(TestRunORM.started_at.desc())
+                    .limit(limit)
+                    .all()
+                )
+                return [_orm_to_test_result(r) for r in rows]
+        except Exception as exc:
+            raise StorageError(f"Failed to get results for test case {tc_id}") from exc
