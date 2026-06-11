@@ -67,4 +67,9 @@ testweavex = ["web/static/**/*", "web/static/*", "skills/builtin/**/*"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test"]
-filterwarnings = ["ignore::pytest.PytestCollectionWarning"]
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::pytest.PytestCollectionWarning",
+    "ignore::DeprecationWarning:sqlalchemy",
+    "ignore::starlette.exceptions.StarletteDeprecationWarning",
+]
