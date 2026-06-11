@@ -249,14 +249,15 @@ def generate(
 @app.command()
 def serve(
     port: int = typer.Option(8080, "--port", help="Port to listen on"),
-    host: str = typer.Option("127.0.0.1", "--host", help="Host to bind"),
+    host: str = typer.Option("0.0.0.0", "--host", help="Host to bind (use 0.0.0.0 for container/server)"),
 ) -> None:
     """Start the TestWeaveX web UI."""
     import uvicorn
     from testweavex.web.app import create_app
     config = load_config()
     application = create_app(config)
-    console.print(f"[green]TestWeaveX UI:[/green] http://{host}:{port}")
+    display_host = "localhost" if host == "0.0.0.0" else host
+    console.print(f"[green]TestWeaveX UI:[/green] http://{display_host}:{port}")
     uvicorn.run(application, host=host, port=port)
 
 

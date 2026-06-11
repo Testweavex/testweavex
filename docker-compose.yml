@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  testweavex:
+    build: .
+    image: testweavex:latest
+    container_name: testweavex
+    ports:
+      - "8080:8080"
+    volumes:
+      - testweavex-data:/data
+    environment:
+      # SQLite (default) — data persists in the named volume
+      - DATABASE_URL=sqlite:////data/.testweavex/results.db
+      # Optional: swap in a Postgres URL for multi-instance or team setups
+      # - DATABASE_URL=postgresql://user:pass@db:5432/testweavex
+      # LLM provider API keys (set in your shell or a .env file)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/dashboard')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  testweavex-data:
+    driver: local

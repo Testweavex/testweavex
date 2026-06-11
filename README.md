@@ -6,6 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://github.com/Testweavex/testweavex/actions/workflows/ci.yml/badge.svg)](https://github.com/Testweavex/testweavex/actions)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://testweavex.github.io/testweavex/)
 
 > **Note:** TestWeaveX is not yet published to PyPI. Install directly from GitHub (see instructions below).
 
@@ -626,6 +627,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, branch naming, PR
 
 ## Documentation
 
+- **[Full Documentation Site](https://testweavex.github.io/testweavex/)** — Getting Started, CLI Reference, Server Deployment, Tutorial, and more
 - [PRD](docs/PRD.md) — Full Product Requirements Document
 - [Architecture](docs/ARCHITECTURE.md) — Full Technical Architecture Specification
 

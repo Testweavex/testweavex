@@ -28,16 +28,16 @@ body { font-family: system-ui, -apple-system, sans-serif; font-size: 15px;
 /* ── Nav ── */
 nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       background: var(--nav-bg); padding: 0 32px;
-      display: flex; align-items: center; height: 56px; gap: 32px; }
+      display: flex; align-items: center; height: 56px; gap: 24px; }
 .nav-logo { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -0.5px;
             text-decoration: none; flex-shrink: 0; }
 .nav-logo span { color: var(--accent); }
-.nav-links { display: flex; gap: 24px; flex: 1; }
+.nav-links { display: flex; gap: 20px; flex: 1; flex-wrap: wrap; }
 .nav-links a { color: var(--nav-text); text-decoration: none; font-size: 13px;
-               font-weight: 500; transition: color .15s; }
+               font-weight: 500; transition: color .15s; white-space: nowrap; }
 .nav-links a:hover, .nav-links a.active { color: var(--nav-active); }
 .nav-badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
-             padding: 2px 8px; border-radius: 999px; }
+             padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
 
 /* ── Layout ── */
 .page { max-width: 860px; margin: 0 auto; padding: 88px 24px 64px; }
@@ -67,6 +67,8 @@ section h2 { font-size: 26px; font-weight: 700; color: var(--text-pri);
              border-bottom: 2px solid var(--border); }
 section h3 { font-size: 16px; font-weight: 700; color: var(--text-pri);
              margin: 28px 0 8px; }
+section h4 { font-size: 14px; font-weight: 700; color: var(--text-pri);
+             margin: 20px 0 6px; }
 section p { color: var(--text-sec); margin-bottom: 16px; }
 section ul, section ol { padding-left: 20px; color: var(--text-sec); margin-bottom: 16px; }
 section li { margin-bottom: 6px; }
@@ -82,6 +84,7 @@ pre code { background: none; padding: 0; color: inherit; }
 .cm { color: #6b7280; }
 .st { color: #86efac; }
 .nm { color: #fbbf24; }
+.hl { color: #f9a8d4; }
 
 /* ── Table ── */
 table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; font-size: 14px; }
@@ -105,6 +108,20 @@ td code { font-size: 12px; }
 .callout { background: #e8f4f8; border-left: 4px solid var(--brand); padding: 14px 18px;
            border-radius: 0 8px 8px 0; margin: 16px 0; }
 .callout strong { color: var(--brand-dark); }
+.callout-warn { background: #fff8e6; border-left: 4px solid var(--accent); padding: 14px 18px;
+                border-radius: 0 8px 8px 0; margin: 16px 0; }
+.callout-warn strong { color: #b85c1a; }
+
+/* ── Platform tabs ── */
+.tab-group { margin: 12px 0 20px; }
+.tab-btns { display: flex; gap: 4px; margin-bottom: 0; }
+.tab-btn { padding: 7px 16px; background: var(--surface); border: 1px solid var(--border);
+           border-bottom: none; border-radius: 6px 6px 0 0; font-size: 13px; font-weight: 600;
+           cursor: pointer; color: var(--text-sec); }
+.tab-btn.active { background: var(--code-bg); color: #fff; border-color: var(--code-bg); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.tab-pane pre { border-radius: 0 8px 8px 8px; margin-top: 0; }
 
 /* ── Footer ── */
 footer { text-align: center; padding: 32px; font-size: 13px; color: var(--text-mut);
@@ -118,8 +135,10 @@ footer a { color: var(--brand); text-decoration: none; }
   <a class="nav-logo" href="#hero">Test<span>Weave</span>X</a>
   <div class="nav-links">
     <a href="#getting-started">Getting Started</a>
-    <a href="#cli">CLI Reference</a>
-    <a href="#config">Configuration</a>
+    <a href="#cli">CLI</a>
+    <a href="#config">Config</a>
+    <a href="#server-deploy">Server Deploy</a>
+    <a href="#tutorial">Tutorial</a>
     <a href="#architecture">Architecture</a>
     <a href="#contributing">Contributing</a>
   </div>
@@ -167,34 +186,40 @@ footer a { color: var(--brand); text-decoration: none; }
       <div class="step-body">
         <h4>View your first gap report</h4>
         <pre><span class="kw">tw</span> gaps --limit 20</pre>
-        <p>TestWeaveX compares your TCM against your automation suite and surfaces unautomated tests ranked by priority score. Generate automation for any gap with <code>tw gaps --generate</code>.</p>
+        <p>TestWeaveX compares your TCM against your automation suite and surfaces unautomated tests ranked by priority score.</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Open the Web UI</h4>
+        <pre><span class="kw">tw</span> serve</pre>
+        <p>Opens the dashboard at <code>http://localhost:8080</code> — test cases, gap report, run history, and LLM settings in one place.</p>
       </div>
     </li>
   </ol>
 
   <div class="callout">
-    <strong>Team mode:</strong> Add <code>--results-server https://your-server --token $TOKEN</code> to any <code>tw</code> command to share results across your team. One <code>docker-compose up</code> starts the server.
+    <strong>Team mode:</strong> Add <code>--results-server https://your-server --token $TOKEN</code> to any <code>tw</code> command to share results across your team. See the <a href="#server-deploy">Server Deployment</a> section for one-command container setup.
   </div>
 </section>
 
 <!-- ── CLI Reference ── -->
 <section id="cli">
   <h2>CLI Reference</h2>
-  <p>Every <code>pytest</code> flag works with <code>tw</code> unchanged. TestWeaveX adds its own flags alongside.</p>
+  <p>Every <code>pytest</code> flag works with <code>tw</code> unchanged. TestWeaveX adds its own sub-commands alongside.</p>
 
   <table>
     <thead><tr><th>Command</th><th>Description</th><th>Key Options</th></tr></thead>
     <tbody>
       <tr><td><code>tw [paths]</code></td><td>Run tests (wraps pytest)</td><td><code>--results-server</code>, <code>--token</code>, <code>--sync-tcm</code>, <code>--gaps</code></td></tr>
-      <tr><td><code>tw init</code></td><td>Initialise TestWeaveX in a project</td><td><code>--llm-provider</code>, <code>--tcm</code></td></tr>
-      <tr><td><code>tw generate</code></td><td>Generate tests from a feature description</td><td><code>--feature</code>, <code>--skill</code>, <code>--output</code></td></tr>
+      <tr><td><code>tw init</code></td><td>Initialise TestWeaveX in a project</td><td><code>--llm-provider</code></td></tr>
+      <tr><td><code>tw generate</code></td><td>Generate tests from a feature description</td><td><code>--feature</code>, <code>--skill</code>, <code>--n</code>, <code>--dry-run</code></td></tr>
       <tr><td><code>tw gaps</code></td><td>Run gap analysis, show ranked report</td><td><code>--limit</code>, <code>--min-score</code>, <code>--generate</code></td></tr>
-      <tr><td><code>tw import</code></td><td>Import from external TCM or CSV</td><td><code>--source</code> (testrail/xray/csv)</td></tr>
-      <tr><td><code>tw status</code></td><td>Show coverage map and summary</td><td><code>--format</code> (table/json/html)</td></tr>
-      <tr><td><code>tw history</code></td><td>Show execution history</td><td><code>--id</code>, <code>--last-n</code></td></tr>
-      <tr><td><code>tw serve</code></td><td>Start local Web UI</td><td><code>--port</code> (default: 8080)</td></tr>
-      <tr><td><code>tw migrate</code></td><td>Migrate from external TCM</td><td><code>--source</code>, <code>--dry-run</code></td></tr>
-      <tr><td><code>tw sync</code></td><td>Push results to external TCM</td><td><code>--tcm</code>, <code>--run-id</code></td></tr>
+      <tr><td><code>tw status</code></td><td>Show coverage map and summary</td><td><code>--format</code> (table/json)</td></tr>
+      <tr><td><code>tw history</code></td><td>Show execution history</td><td><code>--last-n</code></td></tr>
+      <tr><td><code>tw serve</code></td><td>Start the Web UI server</td><td><code>--port</code> (default: 8080), <code>--host</code> (default: 0.0.0.0)</td></tr>
+      <tr><td><code>tw migrate</code></td><td>Import test cases from external TCM</td><td><code>--source</code>, <code>--dry-run</code></td></tr>
+      <tr><td><code>tw sync</code></td><td>Pull latest from external TCM</td><td><code>--tcm</code></td></tr>
     </tbody>
   </table>
 
@@ -210,7 +235,7 @@ footer a { color: var(--brand); text-decoration: none; }
 <!-- ── Configuration ── -->
 <section id="config">
   <h2>Configuration</h2>
-  <p>Create <code>testweavex.config.yaml</code> in your project root. All values support <code>${ENV_VAR}</code> interpolation. Missing keys use defaults.</p>
+  <p>Create <code>testweavex.config.yaml</code> in your project root. All values support <code>${ENV_VAR}</code> interpolation.</p>
 
   <pre><span class="cm"># testweavex.config.yaml</span>
 <span class="nm">llm</span>:
@@ -248,6 +273,475 @@ footer a { color: var(--brand); text-decoration: none; }
   </table>
 </section>
 
+<!-- ── Server Deployment ── -->
+<section id="server-deploy">
+  <h2>Server Deployment</h2>
+  <p>
+    Run <code>tw serve</code> in a container so every team member can access the shared Test Case Management
+    dashboard from their browser — no local installation required. A named volume persists the SQLite
+    database across restarts; swap in <code>DATABASE_URL</code> pointing to PostgreSQL if you need
+    multi-instance or cloud-hosted storage.
+  </p>
+
+  <div class="callout">
+    <strong>Quick start (any platform):</strong> clone the repo, then run
+    <code>docker compose up -d</code> (or <code>podman compose up -d</code>).
+    The UI is available at <code>http://&lt;server-ip&gt;:8080</code> within seconds.
+  </div>
+
+  <h3>Prerequisites</h3>
+  <p>Choose the container runtime that fits your environment:</p>
+  <table>
+    <thead><tr><th>Runtime</th><th>Best for</th><th>Download</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Docker Desktop</strong></td><td>Mac, Windows (easiest GUI)</td><td><a href="https://www.docker.com/products/docker-desktop/">docker.com/products/docker-desktop</a></td></tr>
+      <tr><td><strong>Podman Desktop</strong></td><td>Mac, Windows, Linux (open source, rootless)</td><td><a href="https://podman-desktop.io/">podman-desktop.io</a></td></tr>
+      <tr><td><strong>Docker CLI</strong></td><td>Linux servers, CI, headless</td><td><code>apt/yum install docker.io</code></td></tr>
+      <tr><td><strong>Podman CLI</strong></td><td>Linux servers, rootless containers</td><td><code>apt/yum install podman</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── Docker Desktop ── -->
+  <h3>Option 1 — Docker Desktop (Mac / Windows)</h3>
+
+  <ol class="steps">
+    <li>
+      <div class="step-body">
+        <h4>Install Docker Desktop</h4>
+        <p>Download and install from <a href="https://www.docker.com/products/docker-desktop/">docker.com/products/docker-desktop</a>.
+        Start Docker Desktop and wait until the whale icon in the menu bar shows <em>Docker Desktop is running</em>.</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Clone the repository</h4>
+        <pre><span class="kw">git</span> clone https://github.com/testweavex/testweavex.git
+<span class="kw">cd</span> testweavex</pre>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Set your LLM API key (optional)</h4>
+        <p>Create a <code>.env</code> file in the project root. Docker Compose reads it automatically:</p>
+        <pre>ANTHROPIC_API_KEY=sk-ant-your-key-here
+<span class="cm"># OPENAI_API_KEY=sk-your-openai-key</span></pre>
+        <div class="callout-warn"><strong>Never commit .env to git.</strong> It is listed in <code>.gitignore</code> by default.</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Build and start the container</h4>
+        <pre><span class="kw">docker</span> compose up -d</pre>
+        <p>Docker Desktop builds the image, starts the container, and mounts the data volume. Open Docker Desktop → <em>Containers</em> to see it running.</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Open the dashboard</h4>
+        <p>Navigate to <strong>http://localhost:8080</strong> in your browser.</p>
+        <p>To access from another machine on the same network, use the server's IP address:
+        <code>http://&lt;server-ip&gt;:8080</code></p>
+      </div>
+    </li>
+  </ol>
+
+  <h4>Docker Desktop — useful actions</h4>
+  <table>
+    <thead><tr><th>Action</th><th>Command</th></tr></thead>
+    <tbody>
+      <tr><td>View logs</td><td><code>docker compose logs -f</code></td></tr>
+      <tr><td>Stop the container</td><td><code>docker compose down</code></td></tr>
+      <tr><td>Stop and wipe all data</td><td><code>docker compose down -v</code></td></tr>
+      <tr><td>Rebuild after code changes</td><td><code>docker compose up -d --build</code></td></tr>
+      <tr><td>Check health</td><td><code>docker compose ps</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── Podman Desktop ── -->
+  <h3>Option 2 — Podman Desktop (Mac / Windows / Linux)</h3>
+  <p>Podman Desktop is a free, open-source GUI for Podman — rootless containers with no background daemon required.</p>
+
+  <ol class="steps">
+    <li>
+      <div class="step-body">
+        <h4>Install Podman Desktop</h4>
+        <p>Download from <a href="https://podman-desktop.io/">podman-desktop.io</a> and follow the installer.
+        On first launch, Podman Desktop guides you through initialising the Podman machine (a lightweight VM on Mac/Windows).</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Initialise the Podman machine (Mac / Windows only)</h4>
+        <pre><span class="kw">podman</span> machine init
+<span class="kw">podman</span> machine start</pre>
+        <p>On Linux this step is not needed — Podman runs natively.</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Clone and set up</h4>
+        <pre><span class="kw">git</span> clone https://github.com/testweavex/testweavex.git
+<span class="kw">cd</span> testweavex
+<span class="cm"># Create .env with your LLM API key (optional)</span>
+echo "ANTHROPIC_API_KEY=sk-ant-your-key" &gt; .env</pre>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Build and start with Podman Compose</h4>
+        <p>Install <code>podman-compose</code> if you haven't already:</p>
+        <pre><span class="kw">pip</span> install podman-compose</pre>
+        <p>Then start TestWeaveX:</p>
+        <pre><span class="kw">podman-compose</span> up -d</pre>
+        <p>Alternatively, use the Podman Desktop GUI: open <em>Images</em> → <em>Build</em>, point it at the <code>Dockerfile</code>, then run the image with port <code>8080:8080</code> and a volume for <code>/data</code>.</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h4>Open the dashboard</h4>
+        <p>Navigate to <strong>http://localhost:8080</strong>.</p>
+        <p>In Podman Desktop you can also click the port link directly in the <em>Containers</em> view.</p>
+      </div>
+    </li>
+  </ol>
+
+  <h4>Podman Desktop — useful actions</h4>
+  <table>
+    <thead><tr><th>Action</th><th>Command</th></tr></thead>
+    <tbody>
+      <tr><td>View logs</td><td><code>podman-compose logs -f</code></td></tr>
+      <tr><td>Stop</td><td><code>podman-compose down</code></td></tr>
+      <tr><td>Rebuild</td><td><code>podman-compose up -d --build</code></td></tr>
+      <tr><td>List running containers</td><td><code>podman ps</code></td></tr>
+      <tr><td>Shell into container</td><td><code>podman exec -it testweavex /bin/bash</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── Plain CLI ── -->
+  <h3>Option 3 — Plain Docker / Podman CLI (Linux servers, CI)</h3>
+  <p>For headless servers and CI pipelines where a GUI is not available.</p>
+
+  <div class="tab-group">
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showTab(this,'docker-cli')">Docker</button>
+      <button class="tab-btn" onclick="showTab(this,'podman-cli')">Podman</button>
+    </div>
+    <div id="docker-cli" class="tab-pane active">
+<pre><span class="cm"># 1. Build the image</span>
+<span class="kw">docker</span> build -t testweavex:latest .
+
+<span class="cm"># 2. Create a named volume for persistent data</span>
+<span class="kw">docker</span> volume create testweavex-data
+
+<span class="cm"># 3. Run the server</span>
+<span class="kw">docker</span> run -d \
+  --name testweavex \
+  -p 8080:8080 \
+  -v testweavex-data:/data \
+  -e DATABASE_URL=sqlite:////data/.testweavex/results.db \
+  -e ANTHROPIC_API_KEY=<span class="hl">${ANTHROPIC_API_KEY}</span> \
+  --restart unless-stopped \
+  testweavex:latest
+
+<span class="cm"># 4. Verify it is healthy</span>
+<span class="kw">docker</span> ps
+<span class="kw">curl</span> http://localhost:8080/api/dashboard</pre>
+    </div>
+    <div id="podman-cli" class="tab-pane">
+<pre><span class="cm"># 1. Build the image</span>
+<span class="kw">podman</span> build -t testweavex:latest .
+
+<span class="cm"># 2. Create a named volume for persistent data</span>
+<span class="kw">podman</span> volume create testweavex-data
+
+<span class="cm"># 3. Run the server (rootless — no sudo needed)</span>
+<span class="kw">podman</span> run -d \
+  --name testweavex \
+  -p 8080:8080 \
+  -v testweavex-data:/data \
+  -e DATABASE_URL=sqlite:////data/.testweavex/results.db \
+  -e ANTHROPIC_API_KEY=<span class="hl">${ANTHROPIC_API_KEY}</span> \
+  testweavex:latest
+
+<span class="cm"># Enable auto-restart via systemd (rootless)</span>
+<span class="kw">podman</span> generate systemd --name testweavex --files --new
+<span class="kw">mkdir</span> -p ~/.config/systemd/user
+<span class="kw">mv</span> container-testweavex.service ~/.config/systemd/user/
+<span class="kw">systemctl</span> --user enable --now container-testweavex.service</pre>
+    </div>
+  </div>
+
+  <!-- ── Environment variables ── -->
+  <h3>Environment Variables</h3>
+  <table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>DATABASE_URL</code></td><td><code>sqlite:////data/.testweavex/results.db</code></td><td>Storage backend. Use <code>postgresql://user:pass@host:5432/db</code> for Postgres.</td></tr>
+      <tr><td><code>ANTHROPIC_API_KEY</code></td><td>—</td><td>API key for Anthropic LLM (optional — only needed for AI generation).</td></tr>
+      <tr><td><code>OPENAI_API_KEY</code></td><td>—</td><td>API key for OpenAI (optional).</td></tr>
+      <tr><td><code>TESTWEAVEX_SERVER</code></td><td>—</td><td>URL of this server, used by <code>tw --results-server</code> on client machines.</td></tr>
+      <tr><td><code>TESTWEAVEX_TOKEN</code></td><td>—</td><td>Shared auth token for result-push API.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── Accessing from other machines ── -->
+  <h3>Accessing from Other Machines</h3>
+  <p>
+    The container binds to <code>0.0.0.0:8080</code> by default, so it accepts connections from any
+    network interface. To reach it from another machine:
+  </p>
+  <ol>
+    <li>Find the server's LAN IP: <code>ip a</code> (Linux) or <code>ipconfig</code> (Windows).</li>
+    <li>Open <code>http://&lt;server-ip&gt;:8080</code> in the browser on the remote machine.</li>
+    <li>If a firewall is active, allow port 8080: <code>ufw allow 8080/tcp</code> (Ubuntu) or add a rule in Windows Defender Firewall.</li>
+  </ol>
+  <p>
+    Point your <code>tw</code> CLI on each developer machine at the server so run results are shared:
+  </p>
+  <pre><span class="cm"># testweavex.config.yaml on each developer machine</span>
+<span class="nm">results_server</span>: <span class="st">http://192.168.1.50:8080</span>
+
+<span class="cm"># Or pass it inline:</span>
+<span class="kw">tw</span> --results-server http://192.168.1.50:8080 --token $TESTWEAVEX_TOKEN</pre>
+
+  <!-- ── PostgreSQL backend ── -->
+  <h3>PostgreSQL Backend (Team Mode)</h3>
+  <p>For larger teams or cloud deployments, replace the SQLite volume with a Postgres database:</p>
+  <pre><span class="cm"># docker-compose.override.yml — add to your project root</span>
+<span class="nm">services</span>:
+  <span class="nm">testweavex</span>:
+    <span class="nm">environment</span>:
+      - DATABASE_URL=postgresql://tw:secret@db:5432/testweavex
+    <span class="nm">depends_on</span>: [db]
+
+  <span class="nm">db</span>:
+    <span class="nm">image</span>: <span class="st">postgres:16-alpine</span>
+    <span class="nm">environment</span>:
+      POSTGRES_USER: tw
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: testweavex
+    <span class="nm">volumes</span>:
+      - pg-data:/var/lib/postgresql/data
+
+<span class="nm">volumes</span>:
+  <span class="nm">pg-data</span>:</pre>
+
+  <div class="callout">
+    <strong>Tip:</strong> Run <code>docker compose up -d</code> — Compose merges <code>docker-compose.yml</code>
+    and <code>docker-compose.override.yml</code> automatically. Install the <code>postgres</code> extra
+    first: <code>pip install "testweavex[postgres]"</code> or add it to the Dockerfile.
+  </div>
+
+  <!-- ── Upgrading ── -->
+  <h3>Upgrading</h3>
+  <pre><span class="cm"># Pull the latest source</span>
+<span class="kw">git</span> pull origin main
+
+<span class="cm"># Rebuild the image and restart (data volume is preserved)</span>
+<span class="kw">docker</span> compose up -d --build</pre>
+</section>
+
+<!-- ── Tutorial ── -->
+<section id="tutorial">
+  <h2>Tutorial — Testing practice.expandtesting.com</h2>
+  <p>
+    This hands-on tutorial builds a complete TestWeaveX project against
+    <a href="https://practice.expandtesting.com/">practice.expandtesting.com</a> —
+    a free QA practice site with 70+ pages covering login flows, React CRUD apps, forms,
+    file handling, and more. By the end you will have automated tests, a gap report, and
+    LLM-generated suggestions for uncovered scenarios.
+  </p>
+
+  <h3>Prerequisites</h3>
+  <ul>
+    <li>Python 3.11 or newer</li>
+    <li>An API key for Anthropic, OpenAI, or a running Ollama instance</li>
+  </ul>
+
+  <h3>Step 1 — Install</h3>
+  <pre><span class="cm"># With Anthropic</span>
+<span class="kw">pip</span> install "git+https://github.com/Testweavex/testweavex.git[anthropic]"
+
+<span class="cm"># Install Playwright + Chromium</span>
+<span class="kw">pip</span> install playwright requests
+<span class="kw">playwright</span> install chromium</pre>
+
+  <h3>Step 2 — Create the project</h3>
+  <pre><span class="kw">mkdir</span> expandtesting-tw &amp;&amp; <span class="kw">cd</span> expandtesting-tw
+<span class="kw">tw</span> init --llm-provider anthropic</pre>
+  <p>Edit <code>testweavex.config.yaml</code> to add your API key:</p>
+  <pre><span class="nm">llm</span>:
+  <span class="nm">provider</span>: <span class="st">anthropic</span>
+  <span class="nm">model</span>: <span class="st">claude-sonnet-4-6</span>
+  <span class="nm">api_key</span>: <span class="st">${ANTHROPIC_API_KEY}</span></pre>
+
+  <h3>Step 3 — Project structure</h3>
+  <pre>expandtesting-tw/
+├── testweavex.config.yaml
+├── pytest.ini
+├── conftest.py
+├── features/
+│   ├── auth/login.feature
+│   ├── notes/create_note.feature
+│   └── forms/form_validation.feature
+├── steps/
+│   ├── auth_steps.py
+│   ├── notes_steps.py
+│   └── form_steps.py
+├── test_login.py
+├── test_notes.py
+└── test_forms.py</pre>
+
+  <h3>Step 4 — pytest.ini</h3>
+  <pre>[pytest]
+markers =
+    smoke: fast, critical path
+    regression: full regression suite
+    happy_path: golden path scenarios
+    edge_case: edge / negative scenarios
+    automated: step definitions exist</pre>
+
+  <h3>Step 5 — conftest.py</h3>
+  <pre><span class="kw">import</span> pytest
+<span class="kw">from</span> playwright.sync_api <span class="kw">import</span> sync_playwright
+<span class="kw">from</span> steps <span class="kw">import</span> auth_steps, notes_steps, form_steps  <span class="cm"># noqa: F401</span>
+
+BASE_URL = <span class="st">"https://practice.expandtesting.com"</span>
+
+@pytest.fixture(scope=<span class="st">"session"</span>)
+<span class="kw">def</span> <span class="nm">browser_instance</span>():
+    <span class="kw">with</span> sync_playwright() <span class="kw">as</span> p:
+        b = p.chromium.launch(headless=<span class="kw">True</span>)
+        <span class="kw">yield</span> b
+        b.close()
+
+@pytest.fixture
+<span class="kw">def</span> <span class="nm">page</span>(browser_instance):
+    ctx = browser_instance.new_context()
+    pg = ctx.new_page()
+    <span class="kw">yield</span> pg
+    ctx.close()</pre>
+
+  <h3>Step 6 — Login feature file</h3>
+  <pre><span class="cm"># features/auth/login.feature</span>
+Feature: Login
+
+  Background:
+    Given I open the login page
+
+  @smoke @automated
+  Scenario: Successful login with valid credentials
+    When I enter username "practice" and password "SuperSecretPassword!"
+    And I click the Login button
+    Then I should be redirected to the secure area
+    And I should see "You logged into a secure area!"
+
+  @smoke @automated
+  Scenario: Login fails with invalid username
+    When I enter username "wronguser" and password "SuperSecretPassword!"
+    And I click the Login button
+    Then I should see the error "Your password is invalid!"
+
+  @regression
+  Scenario: Login page shows username and password fields
+    Then the page should have a username input field
+    And the page should have a password input field</pre>
+
+  <h3>Step 7 — Notes feature file</h3>
+  <pre><span class="cm"># features/notes/create_note.feature</span>
+Feature: Create Note
+
+  Background:
+    Given I am logged into the Notes app
+
+  @happy_path @automated
+  Scenario: Create a new note with title and description
+    When I click "Add Note"
+    And I enter note title "Meeting prep"
+    And I select category "Work"
+    And I submit the note form
+    Then the note "Meeting prep" should appear in my notes list
+
+  @edge_case
+  Scenario: Cannot create a note without a title
+    When I click "Add Note"
+    And I leave the title field empty
+    And I submit the note form
+    Then I should see a validation error on the title field</pre>
+
+  <h3>Step 8 — Run the tests</h3>
+  <pre><span class="cm"># Run all tests</span>
+<span class="kw">tw</span>
+
+<span class="cm"># Smoke only</span>
+<span class="kw">tw</span> -m smoke
+
+<span class="cm"># Stop on first failure, short traceback</span>
+<span class="kw">tw</span> -x --tb=short</pre>
+
+  <p>Results are stored automatically in <code>.testweavex/results.db</code>.</p>
+
+  <h3>Step 9 — Coverage and gap report</h3>
+  <pre><span class="kw">tw</span> status        <span class="cm"># coverage table by test type</span>
+<span class="kw">tw</span> gaps --limit 10   <span class="cm"># top gaps ranked by priority score</span></pre>
+  <pre>TestWeaveX Status — Coverage: 58.3%
+┌───────────────┬───────┬───────────┬─────┐
+│ Test Type     │ Total │ Automated │ Gap │
+├───────────────┼───────┼───────────┼─────┤
+│ smoke         │   4   │     3     │  1  │
+│ happy_path    │   4   │     3     │  1  │
+│ edge_case     │   4   │     2     │  2  │
+│ regression    │   4   │     0     │  4  │
+└───────────────┴───────┴───────────┴─────┘</pre>
+
+  <h3>Step 10 — Open the Web UI</h3>
+  <pre><span class="kw">tw</span> serve</pre>
+  <p>Open <strong>http://localhost:8080</strong>. Five views are available:</p>
+  <table>
+    <thead><tr><th>View</th><th>What you see</th></tr></thead>
+    <tbody>
+      <tr><td>Dashboard</td><td>KPI cards: total tests, automation %, open gaps, last run ID</td></tr>
+      <tr><td>Test Cases</td><td>Filterable table — filter by type or automation status</td></tr>
+      <tr><td>Gap Report</td><td>Ranked gaps by priority score; click Generate for LLM suggestions</td></tr>
+      <tr><td>Test Runs</td><td>Run history with per-test pass/fail breakdown</td></tr>
+      <tr><td>Settings</td><td>Switch LLM provider, model, temperature; save to config</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Step 11 — Generate tests for gaps</h3>
+  <pre><span class="kw">tw</span> gaps --generate --limit 5</pre>
+  <p>
+    TestWeaveX calls the LLM for each gap and presents suggested Gherkin for your review.
+    Nothing is written to your repo until you approve. Example output:
+  </p>
+  <pre>Scenario: Login fails when fields are left empty
+  Given I open the login page
+  When I click the Login button without entering any credentials
+  Then I should see validation messages for username and password
+  And I should remain on the login page</pre>
+
+  <h3>Practice site scenario backlog</h3>
+  <table>
+    <thead><tr><th>Type</th><th>Scenario</th><th>URL</th></tr></thead>
+    <tbody>
+      <tr><td>Smoke</td><td>Login with valid credentials</td><td><code>/login</code></td></tr>
+      <tr><td>Smoke</td><td>Notes app home page loads</td><td><code>/notes/app</code></td></tr>
+      <tr><td>Happy path</td><td>Create, edit, and delete a note</td><td><code>/notes/app</code></td></tr>
+      <tr><td>Happy path</td><td>Upload a file and verify it appears</td><td><code>/upload</code></td></tr>
+      <tr><td>Edge case</td><td>Login with empty username/password</td><td><code>/login</code></td></tr>
+      <tr><td>Edge case</td><td>Note title exceeds 100 characters</td><td><code>/notes/app</code></td></tr>
+      <tr><td>E2E</td><td>Full Notes CRUD: register → login → CRUD</td><td><code>/notes/app</code></td></tr>
+      <tr><td>Accessibility</td><td>Login form is keyboard navigable</td><td><code>/login</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>Notes app account:</strong> Register once at
+    <code>https://practice.expandtesting.com/notes/app/register</code> with a dedicated test email.
+    Step definitions authenticate via the Notes REST API and clean up test data between runs automatically.
+  </div>
+</section>
+
 <!-- ── Architecture ── -->
 <section id="architecture">
   <h2>Architecture</h2>
@@ -280,25 +774,21 @@ footer a { color: var(--brand); text-decoration: none; }
   </table>
 
   <h3>Stable ID Algorithm</h3>
-  <p>Every test case gets a deterministic 64-character ID derived from its feature file path and scenario name. This ID is stable across machines, CI runs, and environments. <strong>The algorithm is frozen &mdash; never change it after first deployment.</strong></p>
+  <p>Every test case gets a deterministic 64-character ID derived from its feature file path and scenario name. <strong>The algorithm is frozen — never change it after first deployment.</strong></p>
   <pre><span class="kw">import</span> hashlib
 
 <span class="kw">def</span> <span class="nm">generate_stable_id</span>(*parts: str) -&gt; str:
     key = <span class="st">"|"</span>.join(parts).encode(<span class="st">"utf-8"</span>)
-    <span class="kw">return</span> hashlib.sha256(key).hexdigest()  <span class="cm"># full 64 chars</span>
-
-<span class="cm"># test_case_id = generate_stable_id(feature_path, scenario_name)</span>
-<span class="cm"># feature_id   = generate_stable_id(feature_path)</span></pre>
+    <span class="kw">return</span> hashlib.sha256(key).hexdigest()  <span class="cm"># full 64 chars</span></pre>
 
   <h3>Gap Priority Scoring</h3>
-  <p>Gaps are ranked by a six-signal weighted score (0.0&ndash;1.0). Higher = automate first.</p>
   <table>
     <thead><tr><th>Signal</th><th>Weight</th><th>Meaning</th></tr></thead>
     <tbody>
       <tr><td>Priority</td><td>30%</td><td>P1 tests must be automated before P4</td></tr>
       <tr><td>Test Type</td><td>25%</td><td>Smoke/E2E gaps hurt most (score 1.0/0.9)</td></tr>
       <tr><td>Defect History</td><td>20%</td><td>Tests linked to past bugs are high value</td></tr>
-      <tr><td>Frequency</td><td>15%</td><td>Frequently-run manual tests benefit most from automation</td></tr>
+      <tr><td>Frequency</td><td>15%</td><td>Frequently-run manual tests benefit most</td></tr>
       <tr><td>Staleness</td><td>10%</td><td>Tests not run recently carry higher regression risk</td></tr>
     </tbody>
   </table>
@@ -313,14 +803,12 @@ footer a { color: var(--brand); text-decoration: none; }
     <thead><tr><th>Repo</th><th>Purpose</th></tr></thead>
     <tbody>
       <tr><td><a href="https://github.com/testweavex/testweavex">testweavex/testweavex</a></td><td>Core Python library (this package)</td></tr>
-      <tr><td>testweavex/testweavex-server</td><td>Self-hosted result server (Docker)</td></tr>
       <tr><td>testweavex/testweavex-skills</td><td>Community skill file contributions</td></tr>
-      <tr><td>testweavex/testweavex-docs</td><td>Full Docusaurus documentation site</td></tr>
     </tbody>
   </table>
 
   <h3>Adding a Custom Skill</h3>
-  <p>The easiest way to contribute is a new skill YAML file. Create <code>testweavex/skills/custom/your-skill.yaml</code>:</p>
+  <p>Create <code>testweavex/skills/custom/your-skill.yaml</code>:</p>
   <pre><span class="nm">name</span>: <span class="st">custom/your-skill</span>
 <span class="nm">display_name</span>: <span class="st">Your Skill Name</span>
 <span class="nm">description</span>: <span class="st">What this skill generates</span>
@@ -355,9 +843,9 @@ footer a { color: var(--brand); text-decoration: none; }
 </footer>
 
 <script>
+/* Active nav link on scroll */
 const links = document.querySelectorAll('.nav-links a');
 const sections = document.querySelectorAll('section[id]');
-
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => {
     if (e.isIntersecting) {
@@ -367,8 +855,16 @@ const observer = new IntersectionObserver(entries => {
     }
   });
 }, { rootMargin: '-20% 0px -75% 0px' });
-
 sections.forEach(s => observer.observe(s));
+
+/* Platform tabs */
+function showTab(btn, id) {
+  const group = btn.closest('.tab-group');
+  group.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  group.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
 </script>
 </body>
 </html>

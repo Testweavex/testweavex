@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from testweavex.core.config import TestWeaveXConfig, load_config
@@ -53,7 +54,20 @@ def create_app(config: TestWeaveXConfig | None = None) -> FastAPI:
     app.include_router(events_router, prefix="/api")
     app.include_router(generate_router, prefix="/api")
 
-    if _STATIC_DIR.exists():
-        app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
+    # Serve compiled JS/CSS assets
+    _assets_dir = _STATIC_DIR / "assets"
+    if _assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(_assets_dir)), name="assets")
+
+    # SPA catch-all: any non-API path returns index.html so client-side routing works
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def _spa_fallback(full_path: str) -> FileResponse:
+        index = _STATIC_DIR / "index.html"
+        if index.exists():
+            return FileResponse(str(index))
+        raise HTTPException(
+            status_code=503,
+            detail="Web UI not built. Run 'npm run build' in the frontend directory.",
+        )
 
     return app

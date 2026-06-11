@@ -60,6 +60,9 @@ tw = "testweavex.cli:main"
 where = ["."]
 include = ["testweavex*"]
 
+[tool.setuptools.package-data]
+testweavex = ["web/static/**/*", "web/static/*", "skills/builtin/**/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
