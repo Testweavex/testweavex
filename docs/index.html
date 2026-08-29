@@ -211,7 +211,7 @@ footer a { color: var(--brand); text-decoration: none; }
   <table>
     <thead><tr><th>Command</th><th>Description</th><th>Key Options</th></tr></thead>
     <tbody>
-      <tr><td><code>tw [paths]</code></td><td>Run tests (wraps pytest)</td><td><code>--results-server</code>, <code>--token</code>, <code>--sync-tcm</code>, <code>--gaps</code></td></tr>
+      <tr><td><code>tw [paths]</code></td><td>Run tests (wraps pytest)</td><td><code>--results-server</code>, <code>--token</code>, <code>--gaps</code></td></tr>
       <tr><td><code>tw init</code></td><td>Initialise TestWeaveX in a project</td><td><code>--llm-provider</code></td></tr>
       <tr><td><code>tw generate</code></td><td>Generate tests from a feature description</td><td><code>--feature</code>, <code>--skill</code>, <code>--n</code>, <code>--dry-run</code></td></tr>
       <tr><td><code>tw gaps</code></td><td>Run gap analysis, show ranked report</td><td><code>--limit</code>, <code>--min-score</code>, <code>--generate</code></td></tr>
@@ -226,10 +226,9 @@ footer a { color: var(--brand); text-decoration: none; }
   <h3>CI/CD Example (GitHub Actions)</h3>
   <pre>- <span class="nm">name</span>: Run tests
   <span class="nm">run</span>: |
-    tw run --suite regression \
+    tw --suite regression \
            --results-server <span class="st">${{ secrets.TW_SERVER }}</span> \
-           --token <span class="st">${{ secrets.TW_TOKEN }}</span> \
-           --sync-tcm testrail</pre>
+           --token <span class="st">${{ secrets.TW_TOKEN }}</span></pre>
 </section>
 
 <!-- ── Configuration ── -->
@@ -240,7 +239,7 @@ footer a { color: var(--brand); text-decoration: none; }
   <pre><span class="cm"># testweavex.config.yaml</span>
 <span class="nm">llm</span>:
   <span class="nm">provider</span>: <span class="st">anthropic</span>        <span class="cm"># openai | anthropic | ollama | azure</span>
-  <span class="nm">model</span>: <span class="st">claude-sonnet-4-6</span>
+  <span class="nm">model</span>: <span class="st">claude-sonnet-5</span>
   <span class="nm">api_key</span>: <span class="st">${ANTHROPIC_API_KEY}</span>
   <span class="nm">temperature</span>: <span class="st">0.3</span>
   <span class="nm">max_retries</span>: <span class="st">3</span>
@@ -265,7 +264,7 @@ footer a { color: var(--brand); text-decoration: none; }
   <table>
     <thead><tr><th>Provider</th><th>Key Setting</th><th>Models</th></tr></thead>
     <tbody>
-      <tr><td>Anthropic</td><td><code>api_key: ${ANTHROPIC_API_KEY}</code></td><td>claude-sonnet-4-6, claude-opus-4-7, claude-haiku-4-5</td></tr>
+      <tr><td>Anthropic</td><td><code>api_key: ${ANTHROPIC_API_KEY}</code></td><td>claude-opus-5, claude-sonnet-5, claude-sonnet-4-6, claude-haiku-4-5</td></tr>
       <tr><td>OpenAI</td><td><code>api_key: ${OPENAI_API_KEY}</code></td><td>gpt-4o, gpt-4-turbo, gpt-3.5-turbo</td></tr>
       <tr><td>Ollama</td><td><code>base_url: http://localhost:11434</code></td><td>llama3, mistral, phi-3, any local model</td></tr>
       <tr><td>Azure OpenAI</td><td><code>azure_endpoint</code>, <code>deployment_name</code></td><td>All Azure-deployed OpenAI models</td></tr>
@@ -572,7 +571,7 @@ echo "ANTHROPIC_API_KEY=sk-ant-your-key" &gt; .env</pre>
   <p>Edit <code>testweavex.config.yaml</code> to add your API key:</p>
   <pre><span class="nm">llm</span>:
   <span class="nm">provider</span>: <span class="st">anthropic</span>
-  <span class="nm">model</span>: <span class="st">claude-sonnet-4-6</span>
+  <span class="nm">model</span>: <span class="st">claude-sonnet-5</span>
   <span class="nm">api_key</span>: <span class="st">${ANTHROPIC_API_KEY}</span></pre>
 
   <h3>Step 3 — Project structure</h3>

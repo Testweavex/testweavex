@@ -82,7 +82,7 @@ This creates `testweavex.config.yaml` with your LLM settings. Edit it to set you
 ```yaml
 llm:
   provider: anthropic
-  model: claude-sonnet-4-6
+  model: claude-sonnet-5
   api_key: ${ANTHROPIC_API_KEY}
 ```
 
@@ -96,15 +96,37 @@ TestWeaveX ships with a built-in TCM. No external database, server, or configura
 
 If you have test cases in TestRail or Xray, import them once to seed the built-in TCM:
 
-```bash
-# Configure your TCM connection first
-# testweavex.config.yaml:
-# tcm:
-#   provider: testrail
-#   base_url: https://yourcompany.testrail.io
-#   username: you@company.com
-#   api_key: YOUR_API_KEY
+Configure the connection in `testweavex.config.yaml` first. Credentials live in a
+provider-specific block — keys placed directly under `tcm:` are ignored:
 
+```yaml
+tcm:
+  provider: testrail
+
+  testrail:
+    url: https://yourcompany.testrail.io
+    username: you@company.com
+    api_key: ${TESTRAIL_API_KEY}
+    project_id: 12          # required
+    suite_id: 45            # optional — omit to import every suite
+```
+
+For Xray, use an `xray:` block instead:
+
+```yaml
+tcm:
+  provider: xray
+
+  xray:
+    jira_url: https://yourcompany.atlassian.net
+    client_id: ${XRAY_CLIENT_ID}
+    client_secret: ${XRAY_CLIENT_SECRET}
+    project_key: QA
+```
+
+Then run the import:
+
+```bash
 # Preview what will be imported (no changes written)
 tw migrate --source testrail --dry-run
 
@@ -332,7 +354,7 @@ tw generate --feature "User login with SSO" --skill functional/smoke
 # testweavex.config.yaml
 llm:
   provider: anthropic            # openai | anthropic | ollama | azure
-  model: claude-sonnet-4-6
+  model: claude-sonnet-5
   api_key: ${ANTHROPIC_API_KEY}  # ${ENV_VAR} interpolation supported
   temperature: 0.3
   max_retries: 3
@@ -370,7 +392,7 @@ gap_analysis:
 | `tw status` | Show coverage map and summary |
 | `tw history` | Show execution history |
 | `tw serve` | Start local Web UI (port 8080) |
-| `tw sync` | Push results to external TCM |
+| `tw sync` | Pull test cases from an external TCM into the built-in TCM |
 
 ---
 
@@ -622,6 +644,9 @@ priority: 3
 Other contribution areas: LLM adapter implementations, TCM connectors, bug fixes, documentation.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, branch naming, PR checklist, and extension guides.
+By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+To report a security issue, follow the private disclosure process in [SECURITY.md](SECURITY.md) — please do not open a public issue.
 
 ---
 
@@ -630,6 +655,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, branch naming, PR
 - **[Full Documentation Site](https://testweavex.github.io/testweavex/)** — Getting Started, CLI Reference, Server Deployment, Tutorial, and more
 - [PRD](docs/PRD.md) — Full Product Requirements Document
 - [Architecture](docs/ARCHITECTURE.md) — Full Technical Architecture Specification
+- [Changelog](CHANGELOG.md) — Release history and known limitations
 
 ---
 

@@ -110,8 +110,8 @@ tw -n 4                               # Parallel (pytest-xdist)
 
 # With TestWeaveX extras
 tw --results-server https://tcm.company.com --token $TOKEN
-tw --gaps --sync-tcm testrail
-tw --generate --skill functional/smoke
+tw --gaps
+tw --suite regression --environment staging
 
 # Generate tests
 tw generate --feature "User login with SSO" --skill functional/smoke
@@ -135,7 +135,7 @@ tw migrate --source testrail --dry-run
 # testweavex.config.yaml  (project root)
 llm:
   provider: anthropic          # openai | anthropic | ollama | azure
-  model: claude-sonnet-4-6
+  model: claude-sonnet-5
   api_key: ${ANTHROPIC_API_KEY}
   temperature: 0.3
   max_retries: 3
@@ -289,4 +289,4 @@ Test type priority scores (for `test_type` signal):
 
 - [`docs/PRD.md`](docs/PRD.md) — Full Product Requirements Document (15 sections)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Full Technical Architecture Specification (16 sections)
-- [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — Web UI design system and screen specifications
+- [`testweavex_ui_design.html`](testweavex_ui_design.html) — Web UI design system and screen specifications

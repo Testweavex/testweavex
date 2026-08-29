@@ -149,6 +149,57 @@ The adapter **must**:
 
 ---
 
+## Releasing
+
+Releases are cut by pushing a `v*` tag. The
+[release workflow](.github/workflows/release.yml) rebuilds the frontend, runs
+both test suites, builds the sdist and wheel, publishes to PyPI via Trusted
+Publishing, and opens a GitHub Release with notes taken from `CHANGELOG.md`.
+
+### One-time PyPI setup
+
+Before the first release, add a Trusted Publisher on PyPI so the workflow can
+publish without a stored API token. Go to
+<https://pypi.org/manage/account/publishing/> and add a *pending* publisher with
+exactly these values:
+
+| Field | Value |
+|-------|-------|
+| PyPI Project Name | `testweavex` |
+| Owner | `Testweavex` |
+| Repository name | `testweavex` |
+| Workflow name | `release.yml` |
+| Environment name | `pypi` |
+
+Then create a repository environment named `pypi`
+(*Settings → Environments → New environment*). Add required reviewers there if
+you want a manual approval gate before anything reaches PyPI.
+
+### Cutting a release
+
+1. Bump `version` in `pyproject.toml`.
+2. Move the `[Unreleased]` items in `CHANGELOG.md` under a new `## [X.Y.Z]`
+   heading and update the link definitions at the bottom.
+3. Commit both on `main`.
+4. Tag and push:
+
+   ```bash
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+The workflow fails fast if the tag does not match the `pyproject.toml` version,
+so a mistyped tag cannot publish the wrong release. To rehearse without
+publishing, run the workflow manually from the Actions tab — `workflow_dispatch`
+builds and verifies but never uploads.
+
+After the **first** successful publish, update the install instructions in
+`README.md` and on the docs site from
+`pip install git+https://github.com/Testweavex/testweavex.git` to
+`pip install testweavex`, keeping the Git URL as the "bleeding edge" option.
+
+---
+
 ## Questions?
 
 Open an [issue](https://github.com/Testweavex/testweavex/issues) or start a [GitHub Discussion](https://github.com/Testweavex/testweavex/discussions).

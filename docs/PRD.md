@@ -192,7 +192,7 @@ V1 delivers the core loop end-to-end: from feature description to test execution
 | Playwright execution — API | Execute API test cases via Playwright network interception | P0 | REST API support in V1 |
 | Playwright recording import | Import Playwright recordings to bootstrap test scenarios | P0 | Reduces blank-page problem |
 | Built-in TCM — Web UI | Test case list, status, coverage map, gap report, execution history | P0 | Local-first, browser-based |
-| Built-in TCM — CLI | `tw list`, `tw status`, `tw gaps`, `tw history` commands | P0 | Full CLI parity with Web UI |
+| Built-in TCM — CLI | `tw status`, `tw gaps`, `tw history` commands | P0 | Full CLI parity with Web UI |
 | Local SQLite storage | Default result storage, zero config | P0 | Auto-created on first run |
 | Result server sync | Push results to self-hosted server via `--results-server` flag | P0 | Docker container provided |
 | Gap analysis report | Surface manual tests with no automation counterpart, ranked by priority | P0 | **Core USP** |
@@ -263,30 +263,28 @@ Teams add custom skills by creating YAML files in `testweavex/skills/custom/`. C
 
 ## 10. CLI Reference (V1)
 
-The TestWeaveX CLI is the primary interface for developers and CI/CD pipelines. All commands follow the `tw <command> [options]` pattern. The `tw` command is 100% pytest-compatible — every pytest flag works unchanged.
+The TestWeaveX CLI is the primary interface for developers and CI/CD pipelines. Management commands follow the `tw <command> [options]` pattern; `tw` with no subcommand runs pytest, so every pytest flag and path works unchanged.
 
 | Command | Description | Key Options |
 |---------|-------------|-------------|
-| `tw init` | Initialise TestWeaveX in a project directory, create config file and skills folder | `--llm-provider`, `--tcm-url` |
-| `tw generate` | Generate test cases from feature description or acceptance criteria file | `--feature`, `--skill`, `--llm`, `--output` |
-| `tw run` | Execute test suite or specific feature file | `--suite`, `--tags`, `--browser`, `--results-server`, `--token` |
-| `tw gaps` | Run gap analysis and display unautomated test cases ranked by priority | `--tcm`, `--output`, `--generate` |
-| `tw import` | Import test cases from external TCM or CSV | `--source`, `--format`, `--map` |
-| `tw status` | Show current coverage map and execution summary | `--format (table/json/html)` |
-| `tw history` | Show execution history for a test case or suite | `--id`, `--last-n`, `--format` |
-| `tw sync` | Push execution results to external TCM | `--tcm`, `--run-id`, `--update-status` |
-| `tw serve` | Start local Web UI server | `--port (default: 8080)`, `--host` |
-| `tw migrate` | Migrate from an external TCM to built-in TCM | `--source`, `--format`, `--dry-run` |
+| `tw [paths]` | Execute the test suite or a specific feature file (wraps pytest) | `--suite`, `--environment`, `--tw-browser`, `--results-server`, `--token`, `--gaps`, `--sync-tcm` (not yet implemented) |
+| `tw init` | Initialise TestWeaveX in a project directory, create the config file | `--llm-provider` |
+| `tw generate` | Generate test cases from a feature description | `--feature`, `--skill`, `--category`, `--n`, `--dry-run` |
+| `tw gaps` | Run gap analysis and display unautomated test cases ranked by priority | `--limit`, `--min-score`, `--generate` |
+| `tw status` | Show current coverage map and execution summary | `--format (table/json)` |
+| `tw history` | Show execution history | `--last-n` |
+| `tw sync` | Pull test cases from an external TCM into the built-in TCM (one-way) | `--tcm` |
+| `tw serve` | Start local Web UI server | `--port (default: 8080)`, `--host (default: 0.0.0.0)` |
+| `tw migrate` | Migrate from an external TCM to built-in TCM | `--source`, `--dry-run` |
 
 **Example CI/CD pipeline usage (GitHub Actions):**
 
 ```yaml
 - name: Run tests
   run: |
-    tw run --suite regression \
+    tw --suite regression \
            --results-server ${{ secrets.TW_SERVER }} \
-           --token ${{ secrets.TW_TOKEN }} \
-           --sync-tcm testrail
+           --token ${{ secrets.TW_TOKEN }}
 ```
 
 ---

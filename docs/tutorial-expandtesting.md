@@ -47,7 +47,7 @@ This creates `testweavex.config.yaml`. Edit it to add your API key:
 # testweavex.config.yaml
 llm:
   provider: anthropic
-  model: claude-sonnet-4-6
+  model: claude-sonnet-5
   api_key: ${ANTHROPIC_API_KEY}   # or paste key directly (don't commit it)
   temperature: 0.3
   max_retries: 3
