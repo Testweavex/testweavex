@@ -87,6 +87,10 @@ class _TestWeaveXPlugin:
         suite = config.getoption("--suite", default="default")
         environment = config.getoption("--environment", default="local")
         browser = config.getoption("browser", default=None)
+        # pytest-playwright registers --browser with action="append" on the same
+        # dest, so this may arrive as a list; the column stores a single name.
+        if isinstance(browser, (list, tuple)):
+            browser = browser[0] if browser else None
 
         self._run = self._repo.start_run(
             suite=suite,
@@ -104,6 +108,7 @@ class _TestWeaveXPlugin:
         self._counts: dict[str, int] = {"passed": 0, "failed": 0, "skipped": 0}
         self._start_ms = int(time.time() * 1000)
         self._enable_gaps = config.getoption("--gaps", default=False)
+        self._rootpath = Path(str(config.rootpath))
 
     def pytest_collection_modifyitems(
         self, session: pytest.Session, config: pytest.Config, items: list[pytest.Item]
@@ -136,7 +141,9 @@ class _TestWeaveXPlugin:
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         if report.when != "call" and not (report.when == "setup" and report.failed):
             return
-        source_file = str(report.fspath)
+        # report.fspath is relative to rootdir, while collection uses the
+        # absolute item.fspath; resolve so both derive the same stable id.
+        source_file = str(self._rootpath / str(report.fspath))
         tc_id = generate_stable_id(source_file, report.nodeid)
         status = _map_status(report)
         key = status.value if status.value in self._counts else "skipped"
