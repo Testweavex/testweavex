@@ -1,0 +1,98 @@
+name: Bug report
+description: Something in TestWeaveX does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please do **not** use this form for security
+        issues — follow the private process in [SECURITY.md](https://github.com/Testweavex/testweavex/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The exact `tw` command(s) you ran, and any relevant test or feature file.
+      placeholder: |
+        1. tw init --llm-provider anthropic
+        2. tw gaps --limit 10
+        3. ...
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: TestWeaveX version
+      description: Output of `pip show testweavex | grep Version` (note `tw --version` reports pytest's version, not TestWeaveX's).
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Output of `python --version`.
+      placeholder: "3.12.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other / container
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: LLM provider
+      description: Only relevant for generation and gap-automation issues.
+      options:
+        - Not applicable
+        - anthropic
+        - openai
+        - ollama
+        - azure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: storage
+    attributes:
+      label: Storage backend
+      options:
+        - SQLite (default, local)
+        - Remote result server (team mode)
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant config
+      description: "Your `testweavex.config.yaml`, with secrets removed."
+      render: yaml
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or traceback
+      description: Full output. Re-run with `--tb=long` if a traceback is truncated.
+      render: shell
