@@ -54,12 +54,12 @@ def init(
     """Create testweavex.config.yaml in the current directory."""
     config_path = Path.cwd() / "testweavex.config.yaml"
     model_defaults = {
-        "anthropic": "claude-sonnet-4-6",
+        "anthropic": "claude-sonnet-5",
         "openai": "gpt-4o",
         "ollama": "llama3",
         "azure": "gpt-4",
     }
-    model = model_defaults.get(llm_provider, "claude-sonnet-4-6")
+    model = model_defaults.get(llm_provider, "claude-sonnet-5")
     content = f"""\
 llm:
   provider: {llm_provider}
