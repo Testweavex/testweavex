@@ -305,7 +305,7 @@ class GenerationResponse(BaseModel):
 # testweavex.config.yaml
 llm:
   provider: anthropic          # openai | anthropic | ollama | azure
-  model: claude-sonnet-4-6
+  model: claude-sonnet-5
   api_key: ${ANTHROPIC_API_KEY} # env var interpolation supported
   temperature: 0.3             # lower = more deterministic output
   max_retries: 3
@@ -538,15 +538,15 @@ The `tw` CLI is a thin Typer wrapper that builds pytest arguments and hands off 
 
 | Command | Description | Key Options |
 |---------|-------------|-------------|
-| `tw [paths]` | Run tests (wraps pytest) | `--results-server`, `--token`, `--sync-tcm`, `--gaps`, `--generate` |
-| `tw generate` | Generate test cases from feature description | `--feature`, `--skill`, `--llm`, `--output` |
-| `tw gaps` | Run gap analysis and show ranked report | `--limit`, `--min-score`, `--generate`, `--export` |
-| `tw import` | Import test cases from external TCM or CSV | `--source (testrail/xray/csv)`, `--map` |
-| `tw status` | Show coverage map and execution summary | `--format (table/json/html)` |
-| `tw history` | Show execution history for test or suite | `--id`, `--last-n`, `--format` |
-| `tw serve` | Start Web UI server | `--host`, `--port`, `--open` |
+| `tw [paths]` | Run tests (wraps pytest) | `--results-server`, `--token`, `--suite`, `--environment`, `--tw-browser`, `--gaps`, `--sync-tcm` (not yet implemented) |
+| `tw generate` | Generate test cases from feature description | `--feature`, `--skill`, `--category`, `--n`, `--dry-run` |
+| `tw gaps` | Run gap analysis and show ranked report | `--limit`, `--min-score`, `--generate` |
+| `tw status` | Show coverage map and execution summary | `--format (table/json)` |
+| `tw history` | Show execution history | `--last-n` |
+| `tw serve` | Start Web UI server | `--host`, `--port` |
 | `tw migrate` | Migrate from external TCM to built-in | `--source`, `--dry-run` |
-| `tw init` | Initialise TestWeaveX in a project | `--llm-provider`, `--tcm` |
+| `tw sync` | Pull test cases from an external TCM into the built-in TCM (one-way) | `--tcm` |
+| `tw init` | Initialise TestWeaveX in a project | `--llm-provider` |
 
 ### 7.2 pytest Compatibility
 
@@ -562,8 +562,14 @@ tw --tb short               # Short traceback format
 
 # TestWeaveX additions:
 tw --results-server https://tcm.company.com --token $TOKEN
-tw --gaps --sync-tcm testrail
-tw --generate --skill functional/smoke
+tw --gaps
+tw --suite regression --environment staging
+```
+
+Test generation is a subcommand, not a pytest passthrough flag:
+
+```bash
+tw generate --feature "User login with SSO" --skill functional/smoke
 ```
 
 ---
@@ -1026,10 +1032,9 @@ volumes:
 # GitHub Actions — push results to team server
 - name: Run tests
   run: |
-    tw run --suite regression \
+    tw --suite regression \
            --results-server ${{ secrets.TW_SERVER }} \
-           --token ${{ secrets.TW_TOKEN }} \
-           --sync-tcm testrail
+           --token ${{ secrets.TW_TOKEN }}
 ```
 
 ---

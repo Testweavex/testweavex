@@ -251,20 +251,45 @@ class SQLiteRepository(StorageRepository):
             raise StorageError("Failed to get gaps") from exc
 
     def save_gaps(self, gaps: list[Gap]) -> None:
+        """Upsert gaps keyed on test_case_id.
+
+        A test case has at most one gap row, matching the invariant
+        mark_uncollected_as_gaps already relies on. Keying on Gap.id would
+        insert a duplicate on every analysis run, since the detector mints a
+        fresh uuid each time.
+        """
         try:
             with self._session() as s:
                 for g in gaps:
-                    row = GapORM(
-                        id=g.id,
-                        test_case_id=g.test_case_id,
-                        priority_score=g.priority_score,
-                        gap_reason=g.gap_reason,
-                        suggested_gherkin=g.suggested_gherkin,
-                        status=g.status.value,
-                        detected_at=g.detected_at,
-                        closed_at=g.closed_at,
+                    matches = (
+                        s.query(GapORM)
+                        .filter(GapORM.test_case_id == g.test_case_id)
+                        .order_by(GapORM.detected_at.asc())
+                        .all()
                     )
-                    s.merge(row)
+                    # Collapse duplicates left by older versions, which keyed
+                    # the upsert on the detector's per-run uuid.
+                    for stale in matches[1:]:
+                        s.delete(stale)
+                    existing = matches[0] if matches else None
+                    if existing is None:
+                        s.add(GapORM(
+                            id=g.id,
+                            test_case_id=g.test_case_id,
+                            priority_score=g.priority_score,
+                            gap_reason=g.gap_reason,
+                            suggested_gherkin=g.suggested_gherkin,
+                            status=g.status.value,
+                            detected_at=g.detected_at,
+                            closed_at=g.closed_at,
+                        ))
+                    else:
+                        existing.priority_score = g.priority_score
+                        existing.gap_reason = g.gap_reason
+                        existing.status = g.status.value
+                        existing.closed_at = g.closed_at
+                        if g.suggested_gherkin is not None:
+                            existing.suggested_gherkin = g.suggested_gherkin
                 s.commit()
         except Exception as exc:
             raise StorageError("Failed to save gaps") from exc

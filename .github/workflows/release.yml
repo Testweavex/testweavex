@@ -1,0 +1,154 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and verify only — do not publish"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      # The built UI is committed to the repo, but rebuild it here so a
+      # published wheel can never ship a stale bundle.
+      - name: Build frontend
+        run: |
+          npm ci
+          npm test
+          npm run build
+        working-directory: frontend
+
+      - name: Install build tooling
+        run: pip install --upgrade build twine
+
+      - name: Verify tag matches pyproject version
+        id: version
+        run: |
+          version=$(python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "pyproject version: $version"
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME#v}"
+            echo "tag version:       $tag"
+            if [ "$tag" != "$version" ]; then
+              echo "::error::Tag v$tag does not match pyproject.toml version $version. Bump the version or retag."
+              exit 1
+            fi
+          fi
+
+      - name: Run test suite
+        run: |
+          pip install -e ".[dev]"
+          pytest tests/ -q
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Check distributions
+        run: twine check dist/*
+
+      - name: Confirm UI is bundled in the wheel
+        run: |
+          wheel=$(ls dist/*.whl)
+          if ! python -m zipfile -l "$wheel" | grep -q "testweavex/web/static/index.html"; then
+            echo "::error::Wheel is missing the bundled web UI (testweavex/web/static/index.html)."
+            exit 1
+          fi
+          echo "Web UI present in $wheel"
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # Only real tag pushes publish; workflow_dispatch stays a dry run.
+    if: github.event_name == 'push'
+    environment:
+      name: pypi
+      url: https://pypi.org/p/testweavex
+    permissions:
+      id-token: write   # required for Trusted Publishing (OIDC)
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Create GitHub Release
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          python - <<'PY' > release-notes.md
+          import os, pathlib, re
+
+          version = os.environ["VERSION"]
+          text = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          # Grab everything under "## [<version>]" up to the next "## " heading.
+          match = re.search(
+              rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## |\Z)",
+              text,
+              re.MULTILINE | re.DOTALL,
+          )
+          print(match.group(1).strip() if match else f"Release {version}.")
+          PY
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ needs.build.outputs.version }}
+          body_path: release-notes.md
+          files: dist/*

@@ -54,12 +54,12 @@ def init(
     """Create testweavex.config.yaml in the current directory."""
     config_path = Path.cwd() / "testweavex.config.yaml"
     model_defaults = {
-        "anthropic": "claude-sonnet-4-6",
+        "anthropic": "claude-sonnet-5",
         "openai": "gpt-4o",
         "ollama": "llama3",
         "azure": "gpt-4",
     }
-    model = model_defaults.get(llm_provider, "claude-sonnet-4-6")
+    model = model_defaults.get(llm_provider, "claude-sonnet-5")
     content = f"""\
 llm:
   provider: {llm_provider}
@@ -153,37 +153,33 @@ def history(
 def gaps(
     limit: int = typer.Option(10, "--limit", help="Max gaps to show"),
     min_score: float = typer.Option(0.0, "--min-score", help="Minimum priority score"),
-    generate: bool = typer.Option(False, "--generate", help="Generate tests for top gaps"),
 ) -> None:
-    """Show and optionally generate tests for automation gaps."""
-    from testweavex.events import EventBus
-    from testweavex.gap.analyzer import GapAnalyzer
+    """Show automation gaps recorded by the most recent analysis.
+
+    Reporting only. Gap analysis runs as part of a test session
+    (``pytest --gaps``), which is the only context that knows which test
+    cases were actually collected.
+    """
+    from testweavex.core.exceptions import RecordNotFound
+
     repo = _get_repo()
-    bus = EventBus()
-    config = load_config()
-    analyzer = GapAnalyzer(repo, bus, config.gap_analysis)
-
-    runs = repo.list_runs(limit=1)
-    run_id = runs[0].id if runs else "standalone"
-
-    analyzer.run(run_id, collected_ids=[])
     all_gaps = repo.get_gaps(limit=limit, status="open")
     filtered = [g for g in all_gaps if g.priority_score >= min_score]
 
     if not filtered:
-        console.print("No gaps found matching criteria.")
+        console.print("No gaps found. Run 'pytest --gaps' to analyze.")
         return
 
     table = Table(title=f"Top {len(filtered)} Automation Gaps")
     table.add_column("Score", justify="right")
     table.add_column("Reason")
-    table.add_column("Test Case ID")
+    table.add_column("Test Case")
     for g in filtered:
-        table.add_row(
-            f"{g.priority_score:.3f}",
-            g.gap_reason,
-            g.test_case_id[:16] + "...",
-        )
+        try:
+            label = repo.get_test_case(g.test_case_id).title
+        except RecordNotFound:
+            label = g.test_case_id[:16] + "..."
+        table.add_row(f"{g.priority_score:.3f}", g.gap_reason, label)
     console.print(table)
 
 

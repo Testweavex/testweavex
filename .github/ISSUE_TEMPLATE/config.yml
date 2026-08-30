@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea
+    url: https://github.com/Testweavex/testweavex/discussions
+    about: Ask usage questions or float an idea before opening an issue.
+  - name: Documentation
+    url: https://testweavex.github.io/testweavex/
+    about: Getting started, CLI reference, deployment, and the tutorial.
+  - name: Security vulnerability
+    url: https://github.com/Testweavex/testweavex/security/advisories/new
+    about: Report privately. Please do not open a public issue.

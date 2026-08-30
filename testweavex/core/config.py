@@ -29,7 +29,7 @@ def _interpolate(value: object) -> object:
 @dataclass
 class LLMConfig:
     provider: str = "anthropic"
-    model: str = "claude-sonnet-4-6"
+    model: str = "claude-sonnet-5"
     api_key: str = ""
     temperature: float = 0.3
     max_retries: int = 3

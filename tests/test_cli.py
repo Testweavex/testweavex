@@ -287,3 +287,72 @@ def test_sync_health_check_failure_aborts(tmp_path, monkeypatch):
         result = runner.invoke(app, ["sync", "--tcm", "testrail"])
 
     assert result.exit_code != 0
+
+
+# ── tw gaps: reporting only, never analysis ───────────────────────────────
+
+def _seed_gap_db(tmp_path, *, gap_status="closed", score=0.75):
+    """Create a .testweavex DB with one automated test case and one gap."""
+    from testweavex.core.models import Gap, GapStatus
+    from testweavex.storage.sqlite import SQLiteRepository
+
+    db_dir = tmp_path / ".testweavex"
+    db_dir.mkdir(exist_ok=True)
+    repo = SQLiteRepository(db_url=f"sqlite:///{db_dir / 'results.db'}")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    repo.upsert_test_case(TestCase(
+        id="tc-login",
+        title="Login smoke check",
+        feature_id="feat-auth",
+        gherkin="Scenario: Login smoke check",
+        test_type=TestType.smoke,
+        skill="functional/smoke",
+        is_automated=True,
+        source_file=str(tmp_path / "test_login.py"),
+        created_at=now,
+        updated_at=now,
+    ))
+    repo.save_gaps([Gap(
+        id="gap-login",
+        test_case_id="tc-login",
+        priority_score=score,
+        gap_reason="uncollected",
+        status=GapStatus(gap_status),
+        detected_at=now,
+        closed_at=None if gap_status == "open" else now,
+    )])
+    return repo
+
+
+def test_tw_gaps_does_not_reopen_closed_gaps(tmp_path, monkeypatch):
+    """tw gaps reports; it must not re-run analysis and resurrect closed gaps."""
+    repo = _seed_gap_db(tmp_path, gap_status="closed")
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["gaps"])
+
+    assert result.exit_code == 0
+    assert repo.get_gaps(limit=50, status="open") == []
+
+
+def test_tw_gaps_shows_test_case_title(tmp_path, monkeypatch):
+    _seed_gap_db(tmp_path, gap_status="open")
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["gaps"])
+
+    assert result.exit_code == 0
+    assert "Login smoke check" in result.output
+
+
+def test_tw_gaps_empty_db_points_at_pytest(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["gaps"])
+    assert result.exit_code == 0
+    assert "pytest --gaps" in result.output
+
+
+def test_tw_gaps_rejects_removed_generate_flag(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["gaps", "--generate"])
+    assert result.exit_code != 0
